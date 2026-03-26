@@ -1,47 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  /* MOZE-inspired dark palette */
-  --color-bg: #0A0A0C;
-  --color-bg-card: #141418;
-  --color-bg-card-hover: #1A1A1F;
-  --color-bg-elevated: #1E1E24;
-  --color-bg-sidebar: #101014;
-  --color-bg-input: #1A1A1F;
+  /* Claude-inspired warm dark palette */
+  --color-bg: #1a1915;
+  --color-bg-card: #21201c;
+  --color-bg-card-hover: #2a2924;
+  --color-bg-elevated: #302f2a;
+  --color-bg-sidebar: #161512;
+  --color-bg-input: #2a2924;
 
-  --color-border: #232329;
-  --color-border-light: #2A2A32;
+  --color-border: #33312b;
+  --color-border-light: #3d3b34;
 
-  --color-text-primary: #F5F5F7;
-  --color-text-secondary: #8E8E93;
-  --color-text-tertiary: #636366;
-  --color-text-muted: #48484A;
+  --color-text-primary: #e8e4db;
+  --color-text-secondary: #a39e93;
+  --color-text-tertiary: #7a756b;
+  --color-text-muted: #57534a;
 
-  /* Accent gradients - MOZE uses blue-purple */
-  --color-accent: #5E5CE6;
-  --color-accent-light: #7B78F2;
-  --color-accent-dark: #4A48C4;
+  /* Accent — Claude terracotta/coral */
+  --color-accent: #c96442;
+  --color-accent-light: #da7856;
+  --color-accent-dark: #a85236;
 
-  /* Semantic colors */
-  --color-income: #30D158;
-  --color-expense: #FF453A;
-  --color-transfer: #5E5CE6;
-  --color-balance-positive: #30D158;
-  --color-balance-negative: #FF453A;
+  /* Semantic colors — muted, warm versions */
+  --color-income: #6b9a6b;
+  --color-expense: #c27258;
+  --color-transfer: #8a7eb8;
+  --color-balance-positive: #6b9a6b;
+  --color-balance-negative: #c27258;
 
-  /* Category palette */
-  --color-cat-red: #FF453A;
-  --color-cat-orange: #FF9F0A;
-  --color-cat-yellow: #FFD60A;
-  --color-cat-green: #30D158;
-  --color-cat-teal: #64D2FF;
-  --color-cat-blue: #0A84FF;
-  --color-cat-indigo: #5E5CE6;
-  --color-cat-purple: #BF5AF2;
-  --color-cat-pink: #FF375F;
+  /* Category palette — earth tones, low saturation */
+  --color-cat-red: #c27258;
+  --color-cat-orange: #c9944a;
+  --color-cat-yellow: #b8a44e;
+  --color-cat-green: #6b9a6b;
+  --color-cat-teal: #5e9a9a;
+  --color-cat-blue: #6588a8;
+  --color-cat-indigo: #7a78a8;
+  --color-cat-purple: #9878a8;
+  --color-cat-pink: #b06880;
 
-  --font-sans: "SF Pro Display", "Inter", "Noto Sans TC", "Noto Sans JP", system-ui, -apple-system, sans-serif;
-  --font-mono: "SF Mono", "Fira Code", ui-monospace, monospace;
+  --font-sans: "Söhne", "Inter", "Noto Sans TC", "Noto Sans JP", system-ui, -apple-system, sans-serif;
+  --font-mono: "Söhne Mono", "Fira Code", ui-monospace, monospace;
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -54,7 +54,6 @@
 html, body {
   background-color: var(--color-bg);
   color: var(--color-text-primary);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -74,39 +73,40 @@ html, body {
   background: var(--color-text-tertiary);
 }
 
-/* Glass card effect */
+/* Card — clean solid background, subtle border */
 .glass-card {
-  background: rgba(20, 20, 24, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
 }
 
-/* Gradient accents */
+/* Accent button — solid warm terracotta */
 .gradient-primary {
-  background: linear-gradient(135deg, #5E5CE6, #BF5AF2);
+  background: var(--color-accent);
+}
+.gradient-primary:hover {
+  background: var(--color-accent-light);
 }
 
 .gradient-income {
-  background: linear-gradient(135deg, #30D158, #64D2FF);
+  background: var(--color-income);
 }
 
 .gradient-expense {
-  background: linear-gradient(135deg, #FF453A, #FF9F0A);
+  background: var(--color-expense);
 }
 
-/* Glow effects */
+/* Subtle emphasis — no glows, just gentle lift */
 .glow-accent {
-  box-shadow: 0 0 40px rgba(94, 92, 230, 0.15);
+  border-color: var(--color-border-light);
 }
 
 .glow-income {
-  box-shadow: 0 0 30px rgba(48, 209, 88, 0.1);
+  border-color: var(--color-border-light);
 }
 
 .glow-expense {
-  box-shadow: 0 0 30px rgba(255, 69, 58, 0.1);
+  border-color: var(--color-border-light);
 }
 
 /* Amount display */
@@ -117,12 +117,12 @@ html, body {
 
 /* Fade in animation */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.25s ease-out;
 }
 
 /* Category icon pill */

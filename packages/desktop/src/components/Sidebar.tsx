@@ -24,7 +24,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="px-5 pt-6 pb-4">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 gradient-primary rounded-[10px] flex items-center justify-center">
+          <div className="w-9 h-9 bg-accent rounded-[10px] flex items-center justify-center">
             <span className="text-white text-lg font-bold">K</span>
           </div>
           <div>
@@ -38,7 +38,7 @@ export function Sidebar() {
 
       {/* Quick Add Button */}
       <div className="px-4 mb-2">
-        <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl gradient-primary text-white text-sm font-medium hover:opacity-90 transition-opacity">
+        <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-light transition-colors">
           <Plus className="w-4 h-4" />
           新增記錄
         </button>
