@@ -1,0 +1,18 @@
+{
+  "name": "kakeibo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Multi-currency personal finance application",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "electron", "esbuild"]
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

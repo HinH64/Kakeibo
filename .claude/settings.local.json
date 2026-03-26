@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version)",
+      "Bash(npm --version)",
+      "Bash(npm install:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm approve-builds:*)",
+      "Bash(pnpm config:*)",
+      "Bash(pnpm drizzle-kit:*)",
+      "Bash(kill %1)",
+      "Bash(kill %2)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npx kill-port:*)",
+      "Bash(netstat -ano)",
+      "WebSearch",
+      "WebFetch(domain:yueeh.com)",
+      "WebFetch(domain:moze.app)",
+      "WebFetch(domain:bigbenthings.com)",
+      "WebFetch(domain:dribbble.com)",
+      "WebFetch(domain:moze.webflow.io)"
+    ]
+  }
+}
