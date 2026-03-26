@@ -1,9 +1,11 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { useCategoryStore } from "../stores/categoryStore";
 
 export function Categories() {
+  const navigate = useNavigate();
   const { expenseCategories, incomeCategories, fetch } = useCategoryStore();
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export function Categories() {
         <div className="glass-card p-3">
           <div className="grid grid-cols-4 gap-1">
             {expenseCategories.map((c) => (
-              <div key={c.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-bg-card-hover transition-colors cursor-pointer">
+              <div key={c.id} onClick={() => navigate(`/categories/${c.id}`)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-bg-card-hover transition-colors cursor-pointer">
                 <CategoryIcon iconId={c.icon} color={c.color} size="sm" />
                 <span className="text-[13px] text-text-primary truncate">{c.nameZh || c.name}</span>
               </div>
@@ -42,7 +44,7 @@ export function Categories() {
         <div className="glass-card p-3">
           <div className="grid grid-cols-4 gap-1">
             {incomeCategories.map((c) => (
-              <div key={c.id} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-bg-card-hover transition-colors cursor-pointer">
+              <div key={c.id} onClick={() => navigate(`/categories/${c.id}`)} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-bg-card-hover transition-colors cursor-pointer">
                 <CategoryIcon iconId={c.icon} color={c.color} size="sm" />
                 <span className="text-[13px] text-text-primary truncate">{c.nameZh || c.name}</span>
               </div>

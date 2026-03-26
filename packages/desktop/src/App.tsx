@@ -4,8 +4,11 @@ import { TransactionForm } from "./components/TransactionForm";
 import { useModalStore } from "./stores/modalStore";
 import { Dashboard } from "./pages/Dashboard";
 import { Accounts } from "./pages/Accounts";
+import { AccountDetail } from "./pages/AccountDetail";
 import { Transactions } from "./pages/Transactions";
+import { TransactionDetail } from "./pages/TransactionDetail";
 import { Categories } from "./pages/Categories";
+import { CategoryDetail } from "./pages/CategoryDetail";
 import { Budgets } from "./pages/Budgets";
 import { Settings } from "./pages/Settings";
 
@@ -19,8 +22,11 @@ export function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/accounts" element={<Accounts />} />
+          <Route path="/accounts/:id" element={<AccountDetail />} />
           <Route path="/transactions" element={<Transactions />} />
+          <Route path="/transactions/:id" element={<TransactionDetail />} />
           <Route path="/categories" element={<Categories />} />
+          <Route path="/categories/:id" element={<CategoryDetail />} />
           <Route path="/budgets" element={<Budgets />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

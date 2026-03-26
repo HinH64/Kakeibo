@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -7,6 +8,7 @@ import { useCurrencyStore } from "../stores/currencyStore";
 import { useModalStore } from "../stores/modalStore";
 
 export function Transactions() {
+  const navigate = useNavigate();
   const { transactions, fetch, remove, setFilter } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { openTransactionForm } = useModalStore();
@@ -97,7 +99,7 @@ export function Transactions() {
                   <div
                     key={txn.id}
                     className="flex items-center justify-between px-4 py-3.5 hover:bg-bg-card-hover transition-colors cursor-pointer group"
-                    onClick={() => openTransactionForm(txn.id)}
+                    onClick={() => navigate(`/transactions/${txn.id}`)}
                   >
                     <div className="flex items-center gap-3">
                       <CategoryIcon iconId={txn.categoryIcon ?? "other-expense"} color="#7a756b" size="sm" />

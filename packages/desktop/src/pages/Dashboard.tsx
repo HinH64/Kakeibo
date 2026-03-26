@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { useAccountStore } from "../stores/accountStore";
@@ -6,6 +7,7 @@ import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const { accounts, fetch: fetchAccounts } = useAccountStore();
   const { transactions, spendingByCategory, fetch: fetchTransactions, fetchSpending } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
@@ -48,19 +50,28 @@ export function Dashboard() {
 
       {/* Month Summary Cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="glass-card p-5">
+        <div
+          onClick={() => navigate("/transactions?type=income")}
+          className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors"
+        >
           <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">收入</p>
           <p className="text-[24px] font-bold text-income amount-large">
             +{formatWithSymbol(monthIncome, "TWD").replace("NT$", "")}
           </p>
         </div>
-        <div className="glass-card p-5">
+        <div
+          onClick={() => navigate("/transactions?type=expense")}
+          className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors"
+        >
           <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">支出</p>
           <p className="text-[24px] font-bold text-expense amount-large">
             -{formatWithSymbol(monthExpense, "TWD").replace("NT$", "")}
           </p>
         </div>
-        <div className="glass-card p-5">
+        <div
+          onClick={() => navigate("/transactions")}
+          className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors"
+        >
           <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">結餘</p>
           <p className="text-[24px] font-bold text-text-primary amount-large">
             {monthIncome - monthExpense >= 0 ? "+" : ""}{formatWithSymbol(monthIncome - monthExpense, "TWD").replace("NT$", "")}
@@ -74,7 +85,7 @@ export function Dashboard() {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[13px] font-medium text-text-secondary">帳戶</h3>
-              <button className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+              <button onClick={() => navigate("/accounts")} className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
                 全部 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
@@ -83,7 +94,7 @@ export function Dashboard() {
                 <p className="py-8 text-center text-[13px] text-text-muted">尚未建立帳戶</p>
               ) : (
                 accounts.filter((a) => !a.isArchived).map((acc) => (
-                  <div key={acc.id} className="flex items-center justify-between py-3.5 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
+                  <div key={acc.id} onClick={() => navigate(`/accounts/${acc.id}`)} className="flex items-center justify-between py-3.5 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-bg-elevated flex items-center justify-center">
                         <span className="text-[13px] text-text-secondary font-medium">{acc.currencyCode.slice(0, 2)}</span>
@@ -112,7 +123,7 @@ export function Dashboard() {
                 spendingByCategory.map((cat) => {
                   const maxTotal = spendingByCategory[0]?.total ?? 1;
                   return (
-                    <div key={cat.categoryId} className="flex items-center gap-3">
+                    <div key={cat.categoryId} onClick={() => navigate(`/categories/${cat.categoryId}`)} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
                       <CategoryIcon iconId={cat.categoryIcon} color={cat.categoryColor} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1.5">
@@ -140,7 +151,7 @@ export function Dashboard() {
         <div className="col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[13px] font-medium text-text-secondary">近期交易</h3>
-            <button className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+            <button onClick={() => navigate("/transactions")} className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
               全部 <ArrowRight className="w-3 h-3" />
             </button>
           </div>
@@ -149,7 +160,7 @@ export function Dashboard() {
               <p className="py-8 text-center text-[13px] text-text-muted">尚無交易紀錄</p>
             ) : (
               transactions.slice(0, 5).map((txn) => (
-                <div key={txn.id} className="flex items-center justify-between py-3 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
+                <div key={txn.id} onClick={() => navigate(`/transactions/${txn.id}`)} className="flex items-center justify-between py-3 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
                   <div className="flex items-center gap-2.5">
                     <CategoryIcon iconId={txn.categoryIcon ?? "other-expense"} color="#7a756b" size="sm" />
                     <div>

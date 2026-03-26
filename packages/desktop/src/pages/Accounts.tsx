@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, MoreHorizontal } from "lucide-react";
 import { useAccountStore } from "../stores/accountStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { Modal } from "../components/Modal";
 
 export function Accounts() {
+  const navigate = useNavigate();
   const { accounts, fetch, create } = useAccountStore();
   const { formatWithSymbol, activeCurrencies, fetchActive } = useCurrencyStore();
   const [showCreate, setShowCreate] = useState(false);
@@ -50,10 +52,10 @@ export function Accounts() {
       ) : (
         <>
           {assets.length > 0 && (
-            <Section label="資產" total={formatWithSymbol(totalAssets, "TWD")} totalColor="text-income" accounts={assets} formatBalance={formatWithSymbol} />
+            <Section label="資產" total={formatWithSymbol(totalAssets, "TWD")} totalColor="text-income" accounts={assets} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
           )}
           {liabilities.length > 0 && (
-            <Section label="負債" total={formatWithSymbol(totalLiabilities, "TWD")} totalColor="text-expense" accounts={liabilities} formatBalance={formatWithSymbol} />
+            <Section label="負債" total={formatWithSymbol(totalLiabilities, "TWD")} totalColor="text-expense" accounts={liabilities} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
           )}
         </>
       )}
@@ -68,12 +70,13 @@ export function Accounts() {
   );
 }
 
-function Section({ label, total, totalColor, accounts, formatBalance }: {
+function Section({ label, total, totalColor, accounts, formatBalance, onAccountClick }: {
   label: string;
   total: string;
   totalColor: string;
   accounts: any[];
   formatBalance: (amount: number, code: string) => string;
+  onAccountClick: (id: string) => void;
 }) {
   return (
     <section className="mb-8">
@@ -83,7 +86,7 @@ function Section({ label, total, totalColor, accounts, formatBalance }: {
       </div>
       <div className="glass-card overflow-hidden divide-y divide-border">
         {accounts.map((a: any) => (
-          <div key={a.id} className="flex items-center justify-between px-4 py-4 hover:bg-bg-card-hover transition-colors cursor-pointer group">
+          <div key={a.id} onClick={() => onAccountClick(a.id)} className="flex items-center justify-between px-4 py-4 hover:bg-bg-card-hover transition-colors cursor-pointer group">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-bg-elevated flex items-center justify-center">
                 <span className="text-[13px] text-text-secondary font-medium">{a.currencyCode.slice(0, 2)}</span>
