@@ -1,7 +1,43 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
+const { registerIpcHandlers } = require("./ipc.cjs");
 
 let mainWindow;
+
+async function initDatabase() {
+  // Dynamic import for ESM core package
+  const core = await import("@kakeibo/core");
+
+  const dbPath = path.join(app.getPath("userData"), "kakeibo.db");
+  console.log("[DB] Path:", dbPath);
+
+  // Resolve migrations folder relative to core package
+  const coreDir = path.dirname(require.resolve("@kakeibo/core/package.json"));
+  const migrationsFolder = path.join(coreDir, "drizzle");
+
+  // Run migrations and seed
+  const db = core.runMigrations(dbPath, migrationsFolder);
+  core.seedDatabase(db);
+  console.log("[DB] Initialized and seeded");
+
+  // Create model instances
+  const accountModel = new core.AccountModel(db);
+  const transactionModel = new core.TransactionModel(db);
+  const categoryModel = new core.CategoryModel(db);
+  const currencyModel = new core.CurrencyModel(db);
+
+  // Register IPC handlers
+  registerIpcHandlers(ipcMain, {
+    accountModel,
+    transactionModel,
+    categoryModel,
+    currencyModel,
+    db,
+    settingsTable: core.settings,
+  });
+
+  console.log("[IPC] Handlers registered");
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -31,7 +67,10 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  await initDatabase();
+  createWindow();
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {

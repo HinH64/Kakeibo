@@ -5,7 +5,7 @@ import * as schema from "./schema.js";
 import { seedCurrencies, seedCategories, seedSettings } from "./seed.js";
 import { currencies, categories, settings } from "./schema.js";
 
-export function runMigrations(dbPath: string) {
+export function runMigrations(dbPath: string, migrationsFolder = "./drizzle") {
   const sqlite = new Database(dbPath);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
@@ -13,7 +13,7 @@ export function runMigrations(dbPath: string) {
   const db = drizzle(sqlite, { schema });
 
   // Run schema migrations
-  migrate(db, { migrationsFolder: "./drizzle" });
+  migrate(db, { migrationsFolder });
 
   return db;
 }

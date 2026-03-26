@@ -79,6 +79,48 @@ export class TransactionModel {
     return query.all();
   }
 
+  listWithDetails(filter?: TransactionFilter): TransactionWithDetails[] {
+    const txns = this.list(filter);
+    if (txns.length === 0) return [];
+
+    // Build lookup maps to avoid N+1
+    const accountIds = new Set<string>();
+    const categoryIds = new Set<string>();
+    for (const t of txns) {
+      accountIds.add(t.accountId);
+      if (t.toAccountId) accountIds.add(t.toAccountId);
+      if (t.categoryId) categoryIds.add(t.categoryId);
+    }
+
+    const accountMap = new Map<string, { name: string; currencyCode: string }>();
+    for (const id of accountIds) {
+      const acc = this.db.select().from(accounts).where(eq(accounts.id, id)).get();
+      if (acc) accountMap.set(id, { name: acc.name, currencyCode: acc.currencyCode });
+    }
+
+    const categoryMap = new Map<string, { name: string; icon: string | null; color: string | null }>();
+    for (const id of categoryIds) {
+      const cat = this.db.select().from(categories).where(eq(categories.id, id)).get();
+      if (cat) categoryMap.set(id, { name: cat.name, icon: cat.icon, color: cat.color });
+    }
+
+    return txns.map((t) => {
+      const acc = accountMap.get(t.accountId);
+      const cat = t.categoryId ? categoryMap.get(t.categoryId) : undefined;
+      const toAcc = t.toAccountId ? accountMap.get(t.toAccountId) : undefined;
+      return {
+        ...t,
+        accountName: acc?.name ?? "",
+        accountCurrency: acc?.currencyCode ?? "",
+        categoryName: cat?.name,
+        categoryIcon: cat?.icon ?? undefined,
+        toAccountName: toAcc?.name,
+        toAccountCurrency: toAcc?.currencyCode,
+        tagNames: [],
+      };
+    });
+  }
+
   getWithDetails(id: string): TransactionWithDetails | undefined {
     const txn = this.getById(id);
     if (!txn) return undefined;

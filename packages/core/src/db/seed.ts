@@ -42,32 +42,32 @@ export const seedCurrencies: CurrencyInsert[] = [
 // ─── Default Categories ─────────────────────────────────────────────────────
 
 export const seedCategories: CategoryInsert[] = [
-  // Expense categories
-  { id: "cat-food", name: "Food & Dining", nameZh: "餐飲", nameJa: "食費", icon: "🍽️", color: "#FF6B6B", type: "expense", sortOrder: 1 },
-  { id: "cat-groceries", name: "Groceries", nameZh: "食材雜貨", nameJa: "食料品", icon: "🛒", color: "#4ECDC4", type: "expense", sortOrder: 2 },
-  { id: "cat-transport", name: "Transportation", nameZh: "交通", nameJa: "交通費", icon: "🚗", color: "#45B7D1", type: "expense", sortOrder: 3 },
-  { id: "cat-housing", name: "Housing", nameZh: "居住", nameJa: "住居費", icon: "🏠", color: "#96CEB4", type: "expense", sortOrder: 4 },
-  { id: "cat-utilities", name: "Utilities", nameZh: "水電瓦斯", nameJa: "光熱費", icon: "💡", color: "#FFEAA7", type: "expense", sortOrder: 5 },
-  { id: "cat-entertainment", name: "Entertainment", nameZh: "娛樂", nameJa: "娯楽費", icon: "🎬", color: "#DDA0DD", type: "expense", sortOrder: 6 },
-  { id: "cat-shopping", name: "Shopping", nameZh: "購物", nameJa: "買い物", icon: "🛍️", color: "#FFB347", type: "expense", sortOrder: 7 },
-  { id: "cat-health", name: "Health & Medical", nameZh: "醫療健康", nameJa: "医療費", icon: "🏥", color: "#FF6B6B", type: "expense", sortOrder: 8 },
-  { id: "cat-education", name: "Education", nameZh: "教育", nameJa: "教育費", icon: "📚", color: "#74B9FF", type: "expense", sortOrder: 9 },
-  { id: "cat-personal", name: "Personal Care", nameZh: "個人護理", nameJa: "身だしなみ", icon: "💅", color: "#FDA7DF", type: "expense", sortOrder: 10 },
-  { id: "cat-clothing", name: "Clothing", nameZh: "服飾", nameJa: "衣服", icon: "👕", color: "#A29BFE", type: "expense", sortOrder: 11 },
-  { id: "cat-insurance", name: "Insurance", nameZh: "保險", nameJa: "保険", icon: "🛡️", color: "#636E72", type: "expense", sortOrder: 12 },
-  { id: "cat-gifts", name: "Gifts & Donations", nameZh: "禮物捐款", nameJa: "贈答・寄付", icon: "🎁", color: "#E17055", type: "expense", sortOrder: 13 },
-  { id: "cat-travel", name: "Travel", nameZh: "旅遊", nameJa: "旅行", icon: "✈️", color: "#00B894", type: "expense", sortOrder: 14 },
-  { id: "cat-pets", name: "Pets", nameZh: "寵物", nameJa: "ペット", icon: "🐾", color: "#FDCB6E", type: "expense", sortOrder: 15 },
-  { id: "cat-subscriptions", name: "Subscriptions", nameZh: "訂閱服務", nameJa: "サブスク", icon: "📱", color: "#6C5CE7", type: "expense", sortOrder: 16 },
-  { id: "cat-other-expense", name: "Other Expense", nameZh: "其他支出", nameJa: "その他支出", icon: "📦", color: "#B2BEC3", type: "expense", sortOrder: 99 },
+  // Expense categories — icon field stores Lucide iconId (matches CategoryIcon's iconMap)
+  { id: "cat-food", name: "Food & Dining", nameZh: "餐飲", nameJa: "食費", icon: "food", color: "#c27258", type: "expense", sortOrder: 1 },
+  { id: "cat-groceries", name: "Groceries", nameZh: "食材雜貨", nameJa: "食料品", icon: "groceries", color: "#c9944a", type: "expense", sortOrder: 2 },
+  { id: "cat-transport", name: "Transportation", nameZh: "交通", nameJa: "交通費", icon: "transport", color: "#6588a8", type: "expense", sortOrder: 3 },
+  { id: "cat-housing", name: "Housing", nameZh: "居住", nameJa: "住居費", icon: "housing", color: "#5e9a9a", type: "expense", sortOrder: 4 },
+  { id: "cat-utilities", name: "Utilities", nameZh: "水電瓦斯", nameJa: "光熱費", icon: "utilities", color: "#b8a44e", type: "expense", sortOrder: 5 },
+  { id: "cat-entertainment", name: "Entertainment", nameZh: "娛樂", nameJa: "娯楽費", icon: "entertainment", color: "#9878a8", type: "expense", sortOrder: 6 },
+  { id: "cat-shopping", name: "Shopping", nameZh: "購物", nameJa: "買い物", icon: "shopping", color: "#c9944a", type: "expense", sortOrder: 7 },
+  { id: "cat-health", name: "Health & Medical", nameZh: "醫療健康", nameJa: "医療費", icon: "health", color: "#b06880", type: "expense", sortOrder: 8 },
+  { id: "cat-education", name: "Education", nameZh: "教育", nameJa: "教育費", icon: "education", color: "#7a78a8", type: "expense", sortOrder: 9 },
+  { id: "cat-personal", name: "Personal Care", nameZh: "個人護理", nameJa: "身だしなみ", icon: "personal", color: "#b06880", type: "expense", sortOrder: 10 },
+  { id: "cat-clothing", name: "Clothing", nameZh: "服飾", nameJa: "衣服", icon: "clothing", color: "#9878a8", type: "expense", sortOrder: 11 },
+  { id: "cat-insurance", name: "Insurance", nameZh: "保險", nameJa: "保険", icon: "insurance", color: "#7a756b", type: "expense", sortOrder: 12 },
+  { id: "cat-gifts", name: "Gifts & Donations", nameZh: "禮物捐款", nameJa: "贈答・寄付", icon: "gifts", color: "#c9944a", type: "expense", sortOrder: 13 },
+  { id: "cat-travel", name: "Travel", nameZh: "旅遊", nameJa: "旅行", icon: "travel", color: "#6b9a6b", type: "expense", sortOrder: 14 },
+  { id: "cat-pets", name: "Pets", nameZh: "寵物", nameJa: "ペット", icon: "pets", color: "#b8a44e", type: "expense", sortOrder: 15 },
+  { id: "cat-subscriptions", name: "Subscriptions", nameZh: "訂閱服務", nameJa: "サブスク", icon: "subscriptions", color: "#7a78a8", type: "expense", sortOrder: 16 },
+  { id: "cat-other-expense", name: "Other Expense", nameZh: "其他支出", nameJa: "その他支出", icon: "other-expense", color: "#7a756b", type: "expense", sortOrder: 99 },
 
   // Income categories
-  { id: "cat-salary", name: "Salary", nameZh: "薪資", nameJa: "給与", icon: "💰", color: "#00B894", type: "income", sortOrder: 1 },
-  { id: "cat-freelance", name: "Freelance", nameZh: "接案收入", nameJa: "フリーランス", icon: "💼", color: "#00CEC9", type: "income", sortOrder: 2 },
-  { id: "cat-investment-income", name: "Investment", nameZh: "投資收入", nameJa: "投資収入", icon: "📈", color: "#0984E3", type: "income", sortOrder: 3 },
-  { id: "cat-bonus", name: "Bonus", nameZh: "獎金", nameJa: "ボーナス", icon: "🎉", color: "#6C5CE7", type: "income", sortOrder: 4 },
-  { id: "cat-refund", name: "Refund", nameZh: "退款", nameJa: "返金", icon: "↩️", color: "#FDCB6E", type: "income", sortOrder: 5 },
-  { id: "cat-other-income", name: "Other Income", nameZh: "其他收入", nameJa: "その他収入", icon: "💵", color: "#B2BEC3", type: "income", sortOrder: 99 },
+  { id: "cat-salary", name: "Salary", nameZh: "薪資", nameJa: "給与", icon: "salary", color: "#6b9a6b", type: "income", sortOrder: 1 },
+  { id: "cat-freelance", name: "Freelance", nameZh: "接案收入", nameJa: "フリーランス", icon: "freelance", color: "#5e9a9a", type: "income", sortOrder: 2 },
+  { id: "cat-investment-income", name: "Investment", nameZh: "投資收入", nameJa: "投資収入", icon: "investment", color: "#6588a8", type: "income", sortOrder: 3 },
+  { id: "cat-bonus", name: "Bonus", nameZh: "獎金", nameJa: "ボーナス", icon: "bonus", color: "#9878a8", type: "income", sortOrder: 4 },
+  { id: "cat-refund", name: "Refund", nameZh: "退款", nameJa: "返金", icon: "refund", color: "#b8a44e", type: "income", sortOrder: 5 },
+  { id: "cat-other-income", name: "Other Income", nameZh: "其他收入", nameJa: "その他収入", icon: "other-income", color: "#7a756b", type: "income", sortOrder: 99 },
 ];
 
 // ─── Default Settings ───────────────────────────────────────────────────────

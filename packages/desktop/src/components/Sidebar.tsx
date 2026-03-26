@@ -8,6 +8,7 @@ import {
   Settings,
   Plus,
 } from "lucide-react";
+import { useModalStore } from "../stores/modalStore";
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "總覽" },
@@ -19,6 +20,7 @@ const navItems = [
 ];
 
 export function Sidebar() {
+  const { openTransactionForm } = useModalStore();
   return (
     <aside className="w-[220px] h-screen bg-bg-sidebar flex flex-col border-r border-border">
       {/* Logo */}
@@ -38,7 +40,10 @@ export function Sidebar() {
 
       {/* Quick Add Button */}
       <div className="px-4 mb-2">
-        <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-light transition-colors">
+        <button
+          onClick={() => openTransactionForm()}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-accent text-white text-sm font-medium hover:bg-accent-light transition-colors"
+        >
           <Plus className="w-4 h-4" />
           新增記錄
         </button>

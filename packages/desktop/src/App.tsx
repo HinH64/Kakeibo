@@ -1,5 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
+import { TransactionForm } from "./components/TransactionForm";
+import { useModalStore } from "./stores/modalStore";
 import { Dashboard } from "./pages/Dashboard";
 import { Accounts } from "./pages/Accounts";
 import { Transactions } from "./pages/Transactions";
@@ -8,6 +10,8 @@ import { Budgets } from "./pages/Budgets";
 import { Settings } from "./pages/Settings";
 
 export function App() {
+  const { transactionFormOpen, editingTransactionId, closeTransactionForm } = useModalStore();
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
@@ -21,6 +25,12 @@ export function App() {
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>
+
+      <TransactionForm
+        isOpen={transactionFormOpen}
+        onClose={closeTransactionForm}
+        editTransactionId={editingTransactionId}
+      />
     </div>
   );
 }

@@ -1,0 +1,72 @@
+import type {
+  Account,
+  AccountWithBalance,
+  Category,
+  Currency,
+  Transaction,
+  TransactionWithDetails,
+  ExchangeRate,
+  Setting,
+  TransactionFilter,
+} from "@kakeibo/core";
+
+export interface IpcResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+export interface ElectronAPI {
+  platform: string;
+
+  accounts: {
+    list: (opts?: { includeArchived?: boolean }) => Promise<IpcResult<AccountWithBalance[]>>;
+    getById: (id: string) => Promise<IpcResult<AccountWithBalance | undefined>>;
+    create: (data: Omit<Account, "id" | "createdAt" | "updatedAt">) => Promise<IpcResult<Account>>;
+    update: (id: string, data: Partial<Account>) => Promise<IpcResult<Account | undefined>>;
+    archive: (id: string) => Promise<IpcResult<Account | undefined>>;
+  };
+
+  transactions: {
+    list: (filter?: TransactionFilter) => Promise<IpcResult<Transaction[]>>;
+    listWithDetails: (filter?: TransactionFilter) => Promise<IpcResult<TransactionWithDetails[]>>;
+    getWithDetails: (id: string) => Promise<IpcResult<TransactionWithDetails | undefined>>;
+    create: (data: Omit<Transaction, "id" | "createdAt" | "updatedAt">) => Promise<IpcResult<Transaction>>;
+    update: (id: string, data: Partial<Transaction>) => Promise<IpcResult<Transaction | undefined>>;
+    delete: (id: string) => Promise<IpcResult<void>>;
+    spendingByCategory: (from: string, to: string) => Promise<IpcResult<unknown[]>>;
+    monthlyTrend: (accountId?: string, months?: number) => Promise<IpcResult<unknown[]>>;
+  };
+
+  categories: {
+    list: (opts?: { type?: "income" | "expense"; includeArchived?: boolean }) => Promise<IpcResult<Category[]>>;
+    listAsTree: (opts?: { type?: "income" | "expense" }) => Promise<IpcResult<(Category & { children: Category[] })[]>>;
+    create: (data: Omit<Category, "id">) => Promise<IpcResult<Category>>;
+    update: (id: string, data: Partial<Category>) => Promise<IpcResult<Category | undefined>>;
+    archive: (id: string) => Promise<IpcResult<Category | undefined>>;
+  };
+
+  currencies: {
+    listActive: () => Promise<IpcResult<Currency[]>>;
+    listAll: () => Promise<IpcResult<Currency[]>>;
+    getByCode: (code: string) => Promise<IpcResult<Currency | undefined>>;
+    toggleActive: (code: string, isActive: boolean) => Promise<IpcResult<Currency | undefined>>;
+    formatAmount: (amount: number, code: string) => Promise<IpcResult<string>>;
+    formatWithSymbol: (amount: number, code: string) => Promise<IpcResult<string>>;
+    toSmallestUnit: (displayAmount: number, code: string) => Promise<IpcResult<number>>;
+    getLatestRate: (from: string, to: string) => Promise<IpcResult<ExchangeRate | undefined>>;
+    saveRate: (data: Omit<ExchangeRate, "id">) => Promise<IpcResult<ExchangeRate>>;
+    convert: (amount: number, from: string, to: string) => Promise<IpcResult<number | undefined>>;
+  };
+
+  settings: {
+    get: (key: string) => Promise<IpcResult<Setting | undefined>>;
+    set: (key: string, value: string) => Promise<IpcResult<{ key: string; value: string }>>;
+  };
+}
+
+declare global {
+  interface Window {
+    electronAPI?: ElectronAPI;
+  }
+}
