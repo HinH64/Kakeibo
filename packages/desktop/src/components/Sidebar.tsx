@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   Tags,
   PiggyBank,
+  CalendarDays,
   Settings,
   Plus,
 } from "lucide-react";
@@ -14,6 +15,7 @@ const navItems = [
   { to: "/", icon: LayoutDashboard, label: "總覽" },
   { to: "/accounts", icon: Wallet, label: "帳戶" },
   { to: "/transactions", icon: ArrowLeftRight, label: "交易" },
+  { to: "/calendar", icon: CalendarDays, label: "行事曆" },
   { to: "/categories", icon: Tags, label: "類別" },
   { to: "/budgets", icon: PiggyBank, label: "預算" },
   { to: "/settings", icon: Settings, label: "設定" },

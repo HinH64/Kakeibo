@@ -7,6 +7,7 @@ import { useAccountStore } from "../stores/accountStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useCategoryStore } from "../stores/categoryStore";
 import { useTransactionStore } from "../stores/transactionStore";
+import { useModalStore } from "../stores/modalStore";
 import { ArrowRight } from "lucide-react";
 
 interface TransactionFormProps {
@@ -22,6 +23,7 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
   const { toSmallestUnit, getCurrency, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { fetch: fetchCategories } = useCategoryStore();
   const { create, update, transactions } = useTransactionStore();
+  const { defaultDate } = useModalStore();
 
   // Ensure stores are loaded when form opens
   useEffect(() => {
@@ -76,10 +78,10 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
       setAccountId(accounts[0]?.id ?? "");
       setToAccountId("");
       setCategoryId("");
-      setDate(new Date().toISOString().slice(0, 10));
+      setDate(defaultDate ?? new Date().toISOString().slice(0, 10));
       setNote("");
     }
-  }, [editTransactionId, isOpen, accounts, transactions, getCurrency]);
+  }, [editTransactionId, isOpen, accounts, transactions, getCurrency, defaultDate]);
 
   const handleSave = async () => {
     if (!accountId || amount <= 0) return;

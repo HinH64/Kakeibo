@@ -12,6 +12,7 @@ Built for people who hold money in multiple currencies — expats, frequent trav
 - **Hierarchical categories** — pre-seeded defaults with one level of subcategories
 - **Budget tracking** — per-category monthly budgets with progress bars
 - **Dashboard** — net worth, monthly income/expense summary, spending by category, recent transactions
+- **Calendar view** — month grid with income/expense indicators per day; click any day to see or add transactions
 - **CSV export/import** (planned)
 - **Multi-language** — EN, 繁體中文, 日本語 (planned)
 

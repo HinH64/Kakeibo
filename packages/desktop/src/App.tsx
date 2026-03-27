@@ -11,6 +11,7 @@ import { Categories } from "./pages/Categories";
 import { CategoryDetail } from "./pages/CategoryDetail";
 import { Budgets } from "./pages/Budgets";
 import { Settings } from "./pages/Settings";
+import { Calendar } from "./pages/Calendar";
 
 export function App() {
   const { transactionFormOpen, editingTransactionId, closeTransactionForm } = useModalStore();
@@ -27,6 +28,7 @@ export function App() {
           <Route path="/transactions/:id" element={<TransactionDetail />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/categories/:id" element={<CategoryDetail />} />
+          <Route path="/calendar" element={<Calendar />} />
           <Route path="/budgets" element={<Budgets />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
