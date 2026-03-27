@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { CategoryIcon } from "../components/CategoryIcon";
@@ -6,6 +6,8 @@ import { useAccountStore } from "../stores/accountStore";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useExchangeRateStore } from "../stores/exchangeRateStore";
+import { api } from "../lib/api";
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -13,29 +15,39 @@ export function Dashboard() {
   const { transactions, spendingByCategory, fetch: fetchTransactions, fetchSpending } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { reportingCurrency } = useSettingsStore();
+  const { convert } = useExchangeRateStore();
+
+  const [monthIncome, setMonthIncome] = useState(0);
+  const [monthExpense, setMonthExpense] = useState(0);
 
   useEffect(() => {
     fetchCurrencies();
     fetchAccounts();
-    fetchTransactions({ limit: 5 });
+    fetchTransactions({ limit: 10 });
+
     const now = new Date();
     const monthStart = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
     const monthEnd = now.toISOString().slice(0, 10);
+
     fetchSpending(monthStart, monthEnd);
+
+    api.transactions.monthStats(monthStart, monthEnd).then(({ income, expense }) => {
+      setMonthIncome(income);
+      setMonthExpense(expense);
+    });
   }, []);
 
-  const assets = accounts.filter((a) => a.type === "asset" && !a.isArchived);
-  const liabilities = accounts.filter((a) => a.type === "liability" && !a.isArchived);
+  const activeAccounts = accounts.filter((a) => !a.isArchived);
 
-  const totalAssets = assets.reduce((s, a) => s + a.balance, 0);
-  const totalLiabilities = liabilities.reduce((s, a) => s + a.balance, 0);
+  // Net worth with proper currency conversion
+  const totalAssets = accounts
+    .filter((a) => a.type === "asset" && !a.isArchived)
+    .reduce((s, a) => s + convert(a.balance, a.currencyCode, reportingCurrency), 0);
+  const totalLiabilities = accounts
+    .filter((a) => a.type === "liability" && !a.isArchived)
+    .reduce((s, a) => s + convert(a.balance, a.currencyCode, reportingCurrency), 0);
 
-  const monthIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
-  const monthExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
+  const netWorth = totalAssets - totalLiabilities;
 
   return (
     <div className="p-8 max-w-[900px] animate-fade-in">
@@ -43,40 +55,41 @@ export function Dashboard() {
       <div className="glass-card glow-accent p-6 mb-8">
         <p className="text-text-tertiary text-[12px] uppercase tracking-wider mb-2">淨資產</p>
         <p className="text-[40px] font-bold text-text-primary amount-large leading-none">
-          {formatWithSymbol(totalAssets - totalLiabilities, reportingCurrency)}
+          {formatWithSymbol(netWorth, reportingCurrency)}
         </p>
         <p className="text-text-tertiary text-[12px] mt-3">
-          {accounts.filter((a) => !a.isArchived).length} 個帳戶 · 以 {reportingCurrency} 計算
+          {activeAccounts.length} 個帳戶 · 以 {reportingCurrency} 計算
         </p>
       </div>
 
       {/* Month Summary Cards */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div
-          onClick={() => navigate("/transactions?type=income")}
+          onClick={() => navigate("/transactions")}
           className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors"
         >
-          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">收入</p>
+          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">本月收入</p>
           <p className="text-[24px] font-bold text-income amount-large">
-            +{formatWithSymbol(monthIncome, reportingCurrency).replace("NT$", "")}
-          </p>
-        </div>
-        <div
-          onClick={() => navigate("/transactions?type=expense")}
-          className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors"
-        >
-          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">支出</p>
-          <p className="text-[24px] font-bold text-expense amount-large">
-            -{formatWithSymbol(monthExpense, reportingCurrency).replace("NT$", "")}
+            +{formatWithSymbol(monthIncome, reportingCurrency)}
           </p>
         </div>
         <div
           onClick={() => navigate("/transactions")}
           className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors"
         >
-          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">結餘</p>
-          <p className="text-[24px] font-bold text-text-primary amount-large">
-            {monthIncome - monthExpense >= 0 ? "+" : ""}{formatWithSymbol(monthIncome - monthExpense, reportingCurrency).replace("NT$", "")}
+          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">本月支出</p>
+          <p className="text-[24px] font-bold text-expense amount-large">
+            -{formatWithSymbol(monthExpense, reportingCurrency)}
+          </p>
+        </div>
+        <div
+          onClick={() => navigate("/transactions")}
+          className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors"
+        >
+          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">本月結餘</p>
+          <p className={`text-[24px] font-bold amount-large ${monthIncome - monthExpense >= 0 ? "text-income" : "text-expense"}`}>
+            {monthIncome - monthExpense >= 0 ? "+" : "-"}
+            {formatWithSymbol(Math.abs(monthIncome - monthExpense), reportingCurrency)}
           </p>
         </div>
       </div>
@@ -92,10 +105,10 @@ export function Dashboard() {
               </button>
             </div>
             <div className="glass-card overflow-hidden divide-y divide-border">
-              {accounts.filter((a) => !a.isArchived).length === 0 ? (
+              {activeAccounts.length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-text-muted">尚未建立帳戶</p>
               ) : (
-                accounts.filter((a) => !a.isArchived).map((acc) => (
+                activeAccounts.map((acc) => (
                   <div key={acc.id} onClick={() => navigate(`/accounts/${acc.id}`)} className="flex items-center justify-between py-3.5 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-bg-elevated flex items-center justify-center">
@@ -106,9 +119,16 @@ export function Dashboard() {
                         <p className="text-[11px] text-text-tertiary">{acc.currencyCode}</p>
                       </div>
                     </div>
-                    <p className="text-[15px] font-semibold text-text-primary amount-large">
-                      {formatWithSymbol(acc.balance, acc.currencyCode)}
-                    </p>
+                    <div className="text-right">
+                      <p className="text-[15px] font-semibold text-text-primary amount-large">
+                        {formatWithSymbol(acc.balance, acc.currencyCode)}
+                      </p>
+                      {acc.currencyCode !== reportingCurrency && (
+                        <p className="text-[11px] text-text-tertiary">
+                          ≈ {formatWithSymbol(convert(acc.balance, acc.currencyCode, reportingCurrency), reportingCurrency)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
@@ -149,7 +169,7 @@ export function Dashboard() {
           </section>
         </div>
 
-        {/* Right: Recent */}
+        {/* Right: Recent Transactions */}
         <div className="col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[13px] font-medium text-text-secondary">近期交易</h3>
@@ -161,7 +181,7 @@ export function Dashboard() {
             {transactions.length === 0 ? (
               <p className="py-8 text-center text-[13px] text-text-muted">尚無交易紀錄</p>
             ) : (
-              transactions.slice(0, 5).map((txn) => (
+              transactions.slice(0, 8).map((txn) => (
                 <div key={txn.id} onClick={() => navigate(`/transactions/${txn.id}`)} className="flex items-center justify-between py-3 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
                   <div className="flex items-center gap-2.5">
                     <CategoryIcon iconId={txn.categoryIcon ?? "other-expense"} color="#7a756b" size="sm" />

@@ -77,6 +77,16 @@ const transactionData: TransactionWithDetails[] = [
   { id: "txn-10", type: "expense", amount: 751, date: dayBefore, accountId: "acc-1", categoryId: "cat-transport", note: "加油", toAccountId: null, toAmount: null, exchangeRate: null, createdAt: dayBefore, updatedAt: dayBefore, accountName: "台幣活存", accountCurrency: "TWD", categoryName: "交通", categoryIcon: "transport", tagNames: [] },
 ];
 
+// ─── Budgets ─────────────────────────────────────────────────────────────────
+
+const budgetData: any[] = [
+  { id: "bud-1", categoryId: "cat-food", currencyCode: "TWD", amount: 8000, period: "monthly", startDate: "2026-01-01", isActive: true },
+  { id: "bud-2", categoryId: "cat-transport", currencyCode: "TWD", amount: 3000, period: "monthly", startDate: "2026-01-01", isActive: true },
+  { id: "bud-3", categoryId: "cat-shopping", currencyCode: "TWD", amount: 5000, period: "monthly", startDate: "2026-01-01", isActive: true },
+  { id: "bud-4", categoryId: "cat-entertainment", currencyCode: "TWD", amount: 3000, period: "monthly", startDate: "2026-01-01", isActive: true },
+  { id: "bud-5", categoryId: "cat-subscriptions", currencyCode: "TWD", amount: 1000, period: "monthly", startDate: "2026-01-01", isActive: true },
+];
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 const settingsData: Record<string, string> = {
@@ -165,7 +175,31 @@ export const mockApi = {
       }
       return [...map.values()].sort((a, b) => b.total - a.total);
     },
-    monthlyTrend: async (_accountId?: string, _months?: number) => [],
+    monthlyTrend: async (_accountId?: string, months: number = 6) => {
+      const result: { month: string; income: number; expense: number }[] = [];
+      const now = new Date();
+      for (let i = months - 1; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        let income = 0, expense = 0;
+        for (const t of transactionData) {
+          if (!t.date.startsWith(month)) continue;
+          if (t.type === "income") income += t.amount;
+          else if (t.type === "expense") expense += t.amount;
+        }
+        result.push({ month, income, expense });
+      }
+      return result;
+    },
+    monthStats: async (from: string, to: string) => {
+      let income = 0, expense = 0;
+      for (const t of transactionData) {
+        if (t.date < from || t.date > to) continue;
+        if (t.type === "income") income += t.amount;
+        else if (t.type === "expense") expense += t.amount;
+      }
+      return { income, expense };
+    },
   },
 
   categories: {
@@ -192,6 +226,25 @@ export const mockApi = {
     formatAmount: async (amount: number, code: string) => formatAmount(amount, code),
     formatWithSymbol: async (amount: number, code: string) => formatWithSymbol(amount, code),
     toSmallestUnit: async (displayAmount: number, code: string) => toSmallestUnit(displayAmount, code),
+  },
+
+  budgets: {
+    list: async () => [...budgetData],
+    getById: async (id: string) => budgetData.find((b) => b.id === id),
+    create: async (data: any) => {
+      const b = { ...data, id: `bud-${Date.now()}` };
+      budgetData.push(b);
+      return b;
+    },
+    update: async (id: string, data: any) => {
+      const idx = budgetData.findIndex((b) => b.id === id);
+      if (idx >= 0) { Object.assign(budgetData[idx], data); return budgetData[idx]; }
+      return undefined;
+    },
+    delete: async (id: string) => {
+      const idx = budgetData.findIndex((b) => b.id === id);
+      if (idx >= 0) budgetData.splice(idx, 1);
+    },
   },
 
   settings: {

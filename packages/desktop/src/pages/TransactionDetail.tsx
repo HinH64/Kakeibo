@@ -6,6 +6,8 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useModalStore } from "../stores/modalStore";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useExchangeRateStore } from "../stores/exchangeRateStore";
 
 export function TransactionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +15,8 @@ export function TransactionDetail() {
   const { transactions, fetch: fetchTransactions, remove } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { openTransactionForm } = useModalStore();
+  const { reportingCurrency } = useSettingsStore();
+  const { convert } = useExchangeRateStore();
   const [showDelete, setShowDelete] = useState(false);
 
   useEffect(() => {
@@ -80,10 +84,15 @@ export function TransactionDetail() {
         </div>
 
         {/* Amount display */}
-        <p className={`text-[36px] font-bold amount-large leading-none mb-2 ${typeColor}`}>
+        <p className={`text-[36px] font-bold amount-large leading-none mb-1 ${typeColor}`}>
           {txn.type === "income" ? "+" : txn.type === "expense" ? "-" : ""}
           {formatWithSymbol(txn.amount, txn.accountCurrency)}
         </p>
+        {txn.accountCurrency !== reportingCurrency && txn.type !== "transfer" && (
+          <p className="text-[13px] text-text-tertiary mb-1">
+            ≈ {formatWithSymbol(convert(txn.amount, txn.accountCurrency, reportingCurrency), reportingCurrency)}
+          </p>
+        )}
 
         {/* Transfer destination amount */}
         {txn.type === "transfer" && txn.toAmount && txn.toAccountCurrency && (

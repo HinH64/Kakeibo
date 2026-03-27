@@ -4,6 +4,7 @@ import { Sidebar } from "./components/Sidebar";
 import { TransactionForm } from "./components/TransactionForm";
 import { useModalStore } from "./stores/modalStore";
 import { useSettingsStore } from "./stores/settingsStore";
+import { useExchangeRateStore } from "./stores/exchangeRateStore";
 import { Dashboard } from "./pages/Dashboard";
 import { Accounts } from "./pages/Accounts";
 import { AccountDetail } from "./pages/AccountDetail";
@@ -18,8 +19,9 @@ import { Calendar } from "./pages/Calendar";
 export function App() {
   const { transactionFormOpen, editingTransactionId, closeTransactionForm } = useModalStore();
   const { load } = useSettingsStore();
+  const { fetchRates } = useExchangeRateStore();
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); fetchRates(); }, []);
 
   return (
     <div className="flex h-screen overflow-hidden">

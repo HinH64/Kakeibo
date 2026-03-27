@@ -36,6 +36,7 @@ export interface ElectronAPI {
     delete: (id: string) => Promise<IpcResult<void>>;
     spendingByCategory: (from: string, to: string) => Promise<IpcResult<unknown[]>>;
     monthlyTrend: (accountId?: string, months?: number) => Promise<IpcResult<unknown[]>>;
+    monthStats: (from: string, to: string) => Promise<IpcResult<{ income: number; expense: number }>>;
   };
 
   categories: {
@@ -57,6 +58,14 @@ export interface ElectronAPI {
     getLatestRate: (from: string, to: string) => Promise<IpcResult<ExchangeRate | undefined>>;
     saveRate: (data: Omit<ExchangeRate, "id">) => Promise<IpcResult<ExchangeRate>>;
     convert: (amount: number, from: string, to: string) => Promise<IpcResult<number | undefined>>;
+  };
+
+  budgets: {
+    list: () => Promise<IpcResult<unknown[]>>;
+    getById: (id: string) => Promise<IpcResult<unknown>>;
+    create: (data: any) => Promise<IpcResult<unknown>>;
+    update: (id: string, data: any) => Promise<IpcResult<unknown>>;
+    delete: (id: string) => Promise<IpcResult<void>>;
   };
 
   settings: {

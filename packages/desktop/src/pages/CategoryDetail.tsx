@@ -6,6 +6,7 @@ import { useCategoryStore } from "../stores/categoryStore";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useExchangeRateStore } from "../stores/exchangeRateStore";
 
 export function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +15,7 @@ export function CategoryDetail() {
   const { transactions, fetch: fetchTransactions } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { reportingCurrency } = useSettingsStore();
+  const { convert } = useExchangeRateStore();
 
   useEffect(() => {
     fetchCurrencies();
@@ -136,12 +138,19 @@ export function CategoryDetail() {
                 <p className="text-[13px] text-text-primary">{txn.note || txn.accountName}</p>
                 <p className="text-[11px] text-text-tertiary mt-0.5">{txn.accountName} · {txn.date}</p>
               </div>
-              <p className={`text-[13px] font-medium amount-large ${
-                txn.type === "income" ? "text-income" : "text-text-primary"
-              }`}>
-                {txn.type === "income" ? "+" : "-"}
-                {formatWithSymbol(txn.amount, txn.accountCurrency)}
-              </p>
+              <div className="text-right">
+                <p className={`text-[13px] font-medium amount-large ${
+                  txn.type === "income" ? "text-income" : "text-text-primary"
+                }`}>
+                  {txn.type === "income" ? "+" : "-"}
+                  {formatWithSymbol(txn.amount, txn.accountCurrency)}
+                </p>
+                {txn.accountCurrency !== reportingCurrency && (
+                  <p className="text-[11px] text-text-tertiary">
+                    ≈ {formatWithSymbol(convert(txn.amount, txn.accountCurrency, reportingCurrency), reportingCurrency)}
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>

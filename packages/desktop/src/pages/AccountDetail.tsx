@@ -6,6 +6,8 @@ import { useAccountStore } from "../stores/accountStore";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useModalStore } from "../stores/modalStore";
+import { useSettingsStore } from "../stores/settingsStore";
+import { useExchangeRateStore } from "../stores/exchangeRateStore";
 
 export function AccountDetail() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +16,8 @@ export function AccountDetail() {
   const { transactions, fetch: fetchTransactions } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { openTransactionForm } = useModalStore();
+  const { reportingCurrency } = useSettingsStore();
+  const { convert } = useExchangeRateStore();
 
   useEffect(() => {
     fetchCurrencies();
@@ -75,6 +79,11 @@ export function AccountDetail() {
         <p className="text-[36px] font-bold text-text-primary amount-large leading-none">
           {formatWithSymbol(account.balance, account.currencyCode)}
         </p>
+        {account.currencyCode !== reportingCurrency && (
+          <p className="text-[13px] text-text-tertiary mt-1">
+            ≈ {formatWithSymbol(convert(account.balance, account.currencyCode, reportingCurrency), reportingCurrency)}
+          </p>
+        )}
       </div>
 
       {/* Summary cards */}

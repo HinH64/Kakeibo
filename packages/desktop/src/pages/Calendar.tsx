@@ -7,6 +7,7 @@ import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useModalStore } from "../stores/modalStore";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useExchangeRateStore } from "../stores/exchangeRateStore";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -53,6 +54,7 @@ export function Calendar() {
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { openTransactionForm } = useModalStore();
   const { reportingCurrency } = useSettingsStore();
+  const { convert } = useExchangeRateStore();
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -255,10 +257,17 @@ export function Calendar() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <p className={`text-[13px] font-medium amount-large ${txn.type === "income" ? "text-income" : txn.type === "transfer" ? "text-transfer" : "text-text-primary"}`}>
-                    {txn.type === "income" ? "+" : txn.type === "expense" ? "-" : ""}
-                    {formatWithSymbol(txn.amount, txn.accountCurrency)}
-                  </p>
+                  <div className="text-right">
+                    <p className={`text-[13px] font-medium amount-large ${txn.type === "income" ? "text-income" : txn.type === "transfer" ? "text-transfer" : "text-text-primary"}`}>
+                      {txn.type === "income" ? "+" : txn.type === "expense" ? "-" : ""}
+                      {formatWithSymbol(txn.amount, txn.accountCurrency)}
+                    </p>
+                    {txn.accountCurrency !== reportingCurrency && txn.type !== "transfer" && (
+                      <p className="text-[11px] text-text-tertiary">
+                        ≈ {formatWithSymbol(convert(txn.amount, txn.accountCurrency, reportingCurrency), reportingCurrency)}
+                      </p>
+                    )}
+                  </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); setDeleteId(txn.id); }}
                     className="w-6 h-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-expense/10 transition-all"

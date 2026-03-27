@@ -74,6 +74,10 @@ export const api = {
       if (isElectron()) return unwrap(await window.electronAPI!.transactions.monthlyTrend(accountId, months));
       return mockApi.transactions.monthlyTrend(accountId, months);
     },
+    monthStats: async (from: string, to: string) => {
+      if (isElectron()) return unwrap(await window.electronAPI!.transactions.monthStats(from, to));
+      return mockApi.transactions.monthStats(from, to);
+    },
   },
 
   categories: {
@@ -121,6 +125,29 @@ export const api = {
     },
     toSmallestUnit: async (displayAmount: number, code: string) => {
       return mockApi.currencies.toSmallestUnit(displayAmount, code);
+    },
+  },
+
+  budgets: {
+    list: async () => {
+      if (isElectron()) return unwrap(await window.electronAPI!.budgets.list());
+      return mockApi.budgets.list();
+    },
+    getById: async (id: string) => {
+      if (isElectron()) return unwrap(await window.electronAPI!.budgets.getById(id));
+      return mockApi.budgets.getById(id);
+    },
+    create: async (data: any) => {
+      if (isElectron()) return unwrap(await window.electronAPI!.budgets.create(data));
+      return mockApi.budgets.create(data);
+    },
+    update: async (id: string, data: any) => {
+      if (isElectron()) return unwrap(await window.electronAPI!.budgets.update(id, data));
+      return mockApi.budgets.update(id, data);
+    },
+    delete: async (id: string) => {
+      if (isElectron()) return unwrap(await window.electronAPI!.budgets.delete(id));
+      return mockApi.budgets.delete(id);
     },
   },
 

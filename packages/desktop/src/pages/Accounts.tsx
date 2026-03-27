@@ -4,6 +4,7 @@ import { Plus, MoreHorizontal } from "lucide-react";
 import { useAccountStore } from "../stores/accountStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useSettingsStore } from "../stores/settingsStore";
+import { useExchangeRateStore } from "../stores/exchangeRateStore";
 import { Modal } from "../components/Modal";
 
 export function Accounts() {
@@ -11,6 +12,7 @@ export function Accounts() {
   const { accounts, fetch, create } = useAccountStore();
   const { formatWithSymbol, activeCurrencies, fetchActive } = useCurrencyStore();
   const { reportingCurrency } = useSettingsStore();
+  const { convert } = useExchangeRateStore();
   const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
@@ -54,10 +56,10 @@ export function Accounts() {
       ) : (
         <>
           {assets.length > 0 && (
-            <Section label="資產" total={formatWithSymbol(totalAssets, reportingCurrency)} totalColor="text-income" accounts={assets} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
+            <Section label="資產" total={formatWithSymbol(totalAssets, reportingCurrency)} totalColor="text-income" accounts={assets} formatBalance={formatWithSymbol} reportingCurrency={reportingCurrency} convert={convert} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
           )}
           {liabilities.length > 0 && (
-            <Section label="負債" total={formatWithSymbol(totalLiabilities, reportingCurrency)} totalColor="text-expense" accounts={liabilities} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
+            <Section label="負債" total={formatWithSymbol(totalLiabilities, reportingCurrency)} totalColor="text-expense" accounts={liabilities} formatBalance={formatWithSymbol} reportingCurrency={reportingCurrency} convert={convert} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
           )}
         </>
       )}
@@ -72,12 +74,14 @@ export function Accounts() {
   );
 }
 
-function Section({ label, total, totalColor, accounts, formatBalance, onAccountClick }: {
+function Section({ label, total, totalColor, accounts, formatBalance, reportingCurrency, convert, onAccountClick }: {
   label: string;
   total: string;
   totalColor: string;
   accounts: any[];
   formatBalance: (amount: number, code: string) => string;
+  reportingCurrency: string;
+  convert: (amount: number, from: string, to: string) => number;
   onAccountClick: (id: string) => void;
 }) {
   return (
@@ -99,9 +103,16 @@ function Section({ label, total, totalColor, accounts, formatBalance, onAccountC
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <p className="text-[15px] font-semibold text-text-primary amount-large">
-                {formatBalance(a.balance, a.currencyCode)}
-              </p>
+              <div className="text-right">
+                <p className="text-[15px] font-semibold text-text-primary amount-large">
+                  {formatBalance(a.balance, a.currencyCode)}
+                </p>
+                {a.currencyCode !== reportingCurrency && (
+                  <p className="text-[11px] text-text-tertiary">
+                    ≈ {formatBalance(convert(a.balance, a.currencyCode, reportingCurrency), reportingCurrency)}
+                  </p>
+                )}
+              </div>
               <MoreHorizontal className="w-4 h-4 text-text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
