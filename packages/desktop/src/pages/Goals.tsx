@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Trash2, X, Target, CalendarClock } from "lucide-react";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useTargetStore, type FinancialTarget, type PlannedEvent } from "../stores/targetStore";
@@ -12,9 +12,22 @@ const EMPTY_EVENT = { name: "", amount: "", currencyCode: "", month: "" };
 
 export function Goals() {
   const { targets, events, addTarget, updateTarget, removeTarget, addEvent, removeEvent } = useTargetStore();
-  const { formatWithSymbol, toSmallestUnit, toDisplayAmount } = useCurrencyStore();
+  const { getCurrency, formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { reportingCurrency } = useSettingsStore();
   const { convert } = useExchangeRateStore();
+
+  useEffect(() => { fetchCurrencies(); }, []);
+
+  // Convert display amount to smallest units for storage
+  const toSmallestUnit = (display: number, code: string) => {
+    const dp = getCurrency(code.toUpperCase())?.decimalPlaces ?? 2;
+    return Math.round(display * Math.pow(10, dp));
+  };
+  // Convert stored smallest units back to display string for editing
+  const toDisplayStr = (raw: number, code: string) => {
+    const dp = getCurrency(code)?.decimalPlaces ?? 2;
+    return String(raw / Math.pow(10, dp));
+  };
 
   const [showTargetForm, setShowTargetForm] = useState(false);
   const [editingTarget, setEditingTarget] = useState<FinancialTarget | null>(null);
@@ -37,7 +50,7 @@ export function Goals() {
     setTargetForm({
       name: t.name,
       type: t.type,
-      amount: String(toDisplayAmount(t.amount, t.currencyCode)),
+      amount: toDisplayStr(t.amount, t.currencyCode),
       currencyCode: t.currencyCode,
       targetMonth: t.targetMonth ?? "",
     });
@@ -46,11 +59,12 @@ export function Goals() {
 
   const handleSaveTarget = () => {
     if (!targetForm.name || !targetForm.amount || !targetForm.currencyCode) return;
+    const code = targetForm.currencyCode.toUpperCase();
     const data = {
       name: targetForm.name,
       type: targetForm.type,
-      amount: toSmallestUnit(parseFloat(targetForm.amount), targetForm.currencyCode.toUpperCase()),
-      currencyCode: targetForm.currencyCode.toUpperCase(),
+      amount: toSmallestUnit(parseFloat(targetForm.amount), code),
+      currencyCode: code,
       targetMonth: targetForm.type === "milestone" ? targetForm.targetMonth || undefined : undefined,
     };
     if (editingTarget) {
@@ -70,10 +84,11 @@ export function Goals() {
 
   const handleSaveEvent = () => {
     if (!eventForm.name || !eventForm.amount || !eventForm.currencyCode || !eventForm.month) return;
+    const code = eventForm.currencyCode.toUpperCase();
     addEvent({
       name: eventForm.name,
-      amount: toSmallestUnit(parseFloat(eventForm.amount), eventForm.currencyCode.toUpperCase()),
-      currencyCode: eventForm.currencyCode.toUpperCase(),
+      amount: toSmallestUnit(parseFloat(eventForm.amount), code),
+      currencyCode: code,
       month: eventForm.month,
     });
     setShowEventForm(false);
@@ -119,7 +134,6 @@ export function Goals() {
         ) : (
           <div className="glass-card overflow-hidden divide-y divide-border">
             {floorTargets.map((t) => {
-              const converted = convert(t.amount, t.currencyCode, reportingCurrency);
               return (
                 <div key={t.id} className="flex items-center gap-4 px-5 py-4 group hover:bg-bg-card-hover transition-colors">
                   <div className="w-8 h-8 rounded-lg bg-expense/10 flex items-center justify-center shrink-0">
@@ -135,7 +149,7 @@ export function Goals() {
                     </p>
                     {t.currencyCode !== reportingCurrency && (
                       <p className="text-[11px] text-text-tertiary">
-                        ≈ {formatWithSymbol(converted, reportingCurrency)}
+                        ≈ {formatWithSymbol(convert(t.amount, t.currencyCode, reportingCurrency), reportingCurrency)}
                       </p>
                     )}
                   </div>
@@ -184,7 +198,6 @@ export function Goals() {
             {milestoneTargets
               .sort((a, b) => (a.targetMonth ?? "").localeCompare(b.targetMonth ?? ""))
               .map((t) => {
-                const converted = convert(t.amount, t.currencyCode, reportingCurrency);
                 const now = new Date();
                 const [y, m] = (t.targetMonth ?? "").split("-").map(Number);
                 const monthsLeft = (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1));
@@ -205,7 +218,7 @@ export function Goals() {
                       </p>
                       {t.currencyCode !== reportingCurrency && (
                         <p className="text-[11px] text-text-tertiary">
-                          ≈ {formatWithSymbol(converted, reportingCurrency)}
+                          ≈ {formatWithSymbol(convert(t.amount, t.currencyCode, reportingCurrency), reportingCurrency)}
                         </p>
                       )}
                     </div>
@@ -262,11 +275,11 @@ export function Goals() {
                 </div>
                 <div className="text-right shrink-0">
                   <p className={`text-[15px] font-semibold amount-large ${e.amount >= 0 ? "text-income" : "text-expense"}`}>
-                    {e.amount >= 0 ? "+" : ""}{formatWithSymbol(e.amount, e.currencyCode)}
+                    {e.amount >= 0 ? "+" : ""}{formatWithSymbol(Math.abs(e.amount), e.currencyCode)}
                   </p>
                   {e.currencyCode !== reportingCurrency && (
                     <p className="text-[11px] text-text-tertiary">
-                      ≈ {formatWithSymbol(convert(e.amount, e.currencyCode, reportingCurrency), reportingCurrency)}
+                      ≈ {formatWithSymbol(convert(Math.abs(e.amount), e.currencyCode, reportingCurrency), reportingCurrency)}
                     </p>
                   )}
                 </div>
