@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Plus, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -13,12 +13,8 @@ import { useCurrencyStore } from "../stores/currencyStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useExchangeRateStore } from "../stores/exchangeRateStore";
 import { useBudgetStore } from "../stores/budgetStore";
-import { useTargetStore, type FinancialTarget, type PlannedEvent } from "../stores/targetStore";
+import { useTargetStore } from "../stores/targetStore";
 import { api } from "../lib/api";
-
-const EMPTY_TARGET: { name: string; type: "floor" | "milestone"; amount: string; currencyCode: string; targetMonth: string } =
-  { name: "", type: "floor", amount: "", currencyCode: "", targetMonth: "" };
-const EMPTY_EVENT = { name: "", amount: "", currencyCode: "", month: "" };
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -28,18 +24,13 @@ export function Dashboard() {
   const { reportingCurrency } = useSettingsStore();
   const { convert } = useExchangeRateStore();
   const { budgets, fetch: fetchBudgets } = useBudgetStore();
-  const { targets, events, addTarget, removeTarget, addEvent, removeEvent } = useTargetStore();
+  const { targets, events } = useTargetStore();
 
   const [allCategories, setAllCategories] = useState<{ id: string; type: string }[]>([]);
   const [monthIncome, setMonthIncome] = useState(0);
   const [monthExpense, setMonthExpense] = useState(0);
   const [monthlyTrend, setMonthlyTrend] = useState<{ month: string; income: number; expense: number }[]>([]);
 
-  // Target form state
-  const [showTargetForm, setShowTargetForm] = useState(false);
-  const [targetForm, setTargetForm] = useState(EMPTY_TARGET);
-  const [showEventForm, setShowEventForm] = useState(false);
-  const [eventForm, setEventForm] = useState(EMPTY_EVENT);
   const [showTable, setShowTable] = useState(false);
 
   useEffect(() => {
@@ -144,31 +135,6 @@ export function Dashboard() {
     color: cat.categoryColor,
   }));
   const monthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`;
-
-  const handleAddTarget = () => {
-    if (!targetForm.name || !targetForm.amount || !targetForm.currencyCode) return;
-    addTarget({
-      name: targetForm.name,
-      type: targetForm.type,
-      amount: parseFloat(targetForm.amount),
-      currencyCode: targetForm.currencyCode.toUpperCase(),
-      targetMonth: targetForm.type === "milestone" ? targetForm.targetMonth || undefined : undefined,
-    });
-    setTargetForm(EMPTY_TARGET);
-    setShowTargetForm(false);
-  };
-
-  const handleAddEvent = () => {
-    if (!eventForm.name || !eventForm.amount || !eventForm.currencyCode || !eventForm.month) return;
-    addEvent({
-      name: eventForm.name,
-      amount: parseFloat(eventForm.amount),
-      currencyCode: eventForm.currencyCode.toUpperCase(),
-      month: eventForm.month,
-    });
-    setEventForm(EMPTY_EVENT);
-    setShowEventForm(false);
-  };
 
   const lowestFloor = floorTargets.length > 0
     ? Math.min(...floorTargets.map((t) => t.converted))
@@ -311,13 +277,13 @@ export function Dashboard() {
                 </span>
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowTargetForm(true)}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] bg-bg-elevated text-text-secondary hover:bg-bg-card-hover transition-colors">
-                <Plus className="w-3.5 h-3.5" />新增目標
+            <div className="flex items-center gap-3">
+              <button onClick={() => navigate("/goals")}
+                className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+                管理目標 <ArrowRight className="w-3 h-3" />
               </button>
               <button onClick={() => navigate("/budgets")}
-                className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+                className="text-[12px] text-text-tertiary hover:text-text-secondary flex items-center gap-0.5 transition-colors">
                 調整預算 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
@@ -372,66 +338,6 @@ export function Dashboard() {
                 dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
-
-          {/* Targets & Events list */}
-          {(targets.length > 0 || events.length > 0) && (
-            <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-4">
-              {targets.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-2">目標</p>
-                  <div className="space-y-1.5">
-                    {targets.map((t) => (
-                      <div key={t.id} className="flex items-center gap-2 group">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${t.type === "floor" ? "bg-expense" : "bg-[#f0b429]"}`} />
-                        <span className="text-[12px] text-text-secondary flex-1 truncate">
-                          {t.type === "floor" ? "底線" : "里程碑"}: {t.name}
-                        </span>
-                        <span className="text-[12px] font-medium text-text-primary amount-large shrink-0">
-                          {formatWithSymbol(t.amount, t.currencyCode)}
-                        </span>
-                        {t.targetMonth && (
-                          <span className="text-[11px] text-text-tertiary shrink-0">{t.targetMonth}</span>
-                        )}
-                        <button onClick={() => removeTarget(t.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Trash2 className="w-3.5 h-3.5 text-expense" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {events.length > 0 && (
-                <div>
-                  <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-2">計畫事件</p>
-                  <div className="space-y-1.5">
-                    {events.map((e) => (
-                      <div key={e.id} className="flex items-center gap-2 group">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${e.amount >= 0 ? "bg-income" : "bg-expense"}`} />
-                        <span className="text-[12px] text-text-secondary flex-1 truncate">{e.name}</span>
-                        <span className={`text-[12px] font-medium amount-large shrink-0 ${e.amount >= 0 ? "text-income" : "text-expense"}`}>
-                          {e.amount >= 0 ? "+" : ""}{formatWithSymbol(e.amount, e.currencyCode)}
-                        </span>
-                        <span className="text-[11px] text-text-tertiary shrink-0">{e.month}</span>
-                        <button onClick={() => removeEvent(e.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Trash2 className="w-3.5 h-3.5 text-expense" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Add Event button */}
-          <div className="mt-3 flex gap-3">
-            <button onClick={() => setShowEventForm(true)}
-              className="flex items-center gap-1 text-[12px] text-text-tertiary hover:text-text-secondary transition-colors">
-              <Plus className="w-3.5 h-3.5" />新增計畫事件
-            </button>
-          </div>
 
           {/* Dynamic table toggle */}
           <button onClick={() => setShowTable(!showTable)}
@@ -624,97 +530,6 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* ── Target Form Modal ── */}
-      {showTargetForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowTargetForm(false)}>
-          <div className="glass-card p-6 w-[380px] space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-text-primary">新增目標</h3>
-              <button onClick={() => setShowTargetForm(false)}><X className="w-4 h-4 text-text-tertiary" /></button>
-            </div>
-
-            {/* Type */}
-            <div className="flex gap-2">
-              {(["floor", "milestone"] as const).map((v) => (
-                <button key={v} onClick={() => setTargetForm({ ...targetForm, type: v })}
-                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors ${targetForm.type === v ? "bg-accent text-white" : "bg-bg-elevated text-text-secondary hover:bg-bg-card-hover"}`}>
-                  {v === "floor" ? "底線（每月）" : "里程碑（指定月）"}
-                </button>
-              ))}
-            </div>
-
-            <input placeholder="名稱（如：簽證底線）" value={targetForm.name}
-              onChange={(e) => setTargetForm({ ...targetForm, name: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
-
-            <div className="flex gap-2">
-              <input type="number" placeholder="金額" value={targetForm.amount}
-                onChange={(e) => setTargetForm({ ...targetForm, amount: e.target.value })}
-                className="flex-1 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
-              <input placeholder="幣別（如 TWD）" value={targetForm.currencyCode}
-                onChange={(e) => setTargetForm({ ...targetForm, currencyCode: e.target.value })}
-                className="w-24 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
-            </div>
-
-            {targetForm.type === "milestone" && (
-              <input type="month" value={targetForm.targetMonth}
-                onChange={(e) => setTargetForm({ ...targetForm, targetMonth: e.target.value })}
-                className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary focus:outline-none focus:border-accent/50" />
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setShowTargetForm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-bg-elevated text-[13px] text-text-secondary hover:bg-bg-card-hover transition-colors">
-                取消
-              </button>
-              <button onClick={handleAddTarget}
-                className="flex-1 py-2.5 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent-light transition-colors">
-                儲存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Event Form Modal ── */}
-      {showEventForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowEventForm(false)}>
-          <div className="glass-card p-6 w-[380px] space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-[15px] font-semibold text-text-primary">新增計畫事件</h3>
-              <button onClick={() => setShowEventForm(false)}><X className="w-4 h-4 text-text-tertiary" /></button>
-            </div>
-
-            <input placeholder="名稱（如：ILR 申請費）" value={eventForm.name}
-              onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
-
-            <div className="flex gap-2">
-              <input type="number" placeholder="金額（負數 = 支出）" value={eventForm.amount}
-                onChange={(e) => setEventForm({ ...eventForm, amount: e.target.value })}
-                className="flex-1 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
-              <input placeholder="幣別" value={eventForm.currencyCode}
-                onChange={(e) => setEventForm({ ...eventForm, currencyCode: e.target.value })}
-                className="w-24 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
-            </div>
-
-            <input type="month" value={eventForm.month}
-              onChange={(e) => setEventForm({ ...eventForm, month: e.target.value })}
-              className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary focus:outline-none focus:border-accent/50" />
-
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setShowEventForm(false)}
-                className="flex-1 py-2.5 rounded-xl bg-bg-elevated text-[13px] text-text-secondary hover:bg-bg-card-hover transition-colors">
-                取消
-              </button>
-              <button onClick={handleAddEvent}
-                className="flex-1 py-2.5 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent-light transition-colors">
-                儲存
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

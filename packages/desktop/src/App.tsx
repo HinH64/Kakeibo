@@ -13,6 +13,7 @@ import { TransactionDetail } from "./pages/TransactionDetail";
 import { Categories } from "./pages/Categories";
 import { CategoryDetail } from "./pages/CategoryDetail";
 import { Budgets } from "./pages/Budgets";
+import { Goals } from "./pages/Goals";
 import { Settings } from "./pages/Settings";
 import { Calendar } from "./pages/Calendar";
 
@@ -37,6 +38,7 @@ export function App() {
           <Route path="/categories/:id" element={<CategoryDetail />} />
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/budgets" element={<Budgets />} />
+          <Route path="/goals" element={<Goals />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </main>

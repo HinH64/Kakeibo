@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Settings,
   Plus,
+  Target,
 } from "lucide-react";
 import { useModalStore } from "../stores/modalStore";
 
@@ -18,6 +19,7 @@ const navItems = [
   { to: "/calendar", icon: CalendarDays, label: "行事曆" },
   { to: "/categories", icon: Tags, label: "類別" },
   { to: "/budgets", icon: PiggyBank, label: "預算" },
+  { to: "/goals", icon: Target, label: "目標" },
   { to: "/settings", icon: Settings, label: "設定" },
 ];
 
