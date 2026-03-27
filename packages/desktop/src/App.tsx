@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import { Sidebar } from "./components/Sidebar";
 import { TransactionForm } from "./components/TransactionForm";
 import { useModalStore } from "./stores/modalStore";
+import { useSettingsStore } from "./stores/settingsStore";
 import { Dashboard } from "./pages/Dashboard";
 import { Accounts } from "./pages/Accounts";
 import { AccountDetail } from "./pages/AccountDetail";
@@ -15,6 +17,9 @@ import { Calendar } from "./pages/Calendar";
 
 export function App() {
   const { transactionFormOpen, editingTransactionId, closeTransactionForm } = useModalStore();
+  const { load } = useSettingsStore();
+
+  useEffect(() => { load(); }, []);
 
   return (
     <div className="flex h-screen overflow-hidden">

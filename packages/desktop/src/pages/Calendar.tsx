@@ -6,6 +6,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useModalStore } from "../stores/modalStore";
+import { useSettingsStore } from "../stores/settingsStore";
 
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
@@ -51,6 +52,7 @@ export function Calendar() {
   const { transactions, fetch, remove } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { openTransactionForm } = useModalStore();
+  const { reportingCurrency } = useSettingsStore();
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -142,19 +144,19 @@ export function Calendar() {
         <div className="flex gap-0 mb-5 rounded-xl bg-bg-elevated overflow-hidden">
           <div className="flex-1 text-center py-3">
             <p className="text-[10px] text-text-tertiary mb-0.5 uppercase tracking-wider">收入</p>
-            <p className="text-[13px] font-semibold text-income">+{formatWithSymbol(totalIncome, "TWD")}</p>
+            <p className="text-[13px] font-semibold text-income">+{formatWithSymbol(totalIncome, reportingCurrency)}</p>
           </div>
           <div className="w-px bg-border" />
           <div className="flex-1 text-center py-3">
             <p className="text-[10px] text-text-tertiary mb-0.5 uppercase tracking-wider">支出</p>
-            <p className="text-[13px] font-semibold text-expense">-{formatWithSymbol(totalExpense, "TWD")}</p>
+            <p className="text-[13px] font-semibold text-expense">-{formatWithSymbol(totalExpense, reportingCurrency)}</p>
           </div>
           <div className="w-px bg-border" />
           <div className="flex-1 text-center py-3">
             <p className="text-[10px] text-text-tertiary mb-0.5 uppercase tracking-wider">結餘</p>
             <p className={`text-[13px] font-semibold ${totalIncome - totalExpense >= 0 ? "text-income" : "text-expense"}`}>
               {totalIncome - totalExpense >= 0 ? "+" : "-"}
-              {formatWithSymbol(Math.abs(totalIncome - totalExpense), "TWD")}
+              {formatWithSymbol(Math.abs(totalIncome - totalExpense), reportingCurrency)}
             </p>
           </div>
         </div>

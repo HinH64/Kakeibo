@@ -5,6 +5,7 @@ import { CategoryIcon } from "../components/CategoryIcon";
 import { useCategoryStore } from "../stores/categoryStore";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
+import { useSettingsStore } from "../stores/settingsStore";
 
 export function CategoryDetail() {
   const { id } = useParams<{ id: string }>();
@@ -12,6 +13,7 @@ export function CategoryDetail() {
   const { categories, fetch: fetchCategories } = useCategoryStore();
   const { transactions, fetch: fetchTransactions } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
+  const { reportingCurrency } = useSettingsStore();
 
   useEffect(() => {
     fetchCurrencies();
@@ -72,9 +74,9 @@ export function CategoryDetail() {
         <p className={`text-[32px] font-bold amount-large leading-none ${
           category.type === "income" ? "text-income" : "text-expense"
         }`}>
-          {category.type === "income" ? "+" : "-"}{formatWithSymbol(total, "TWD").replace(/^[^0-9]*/, "")}
+          {category.type === "income" ? "+" : "-"}{formatWithSymbol(total, reportingCurrency).replace(/^[^0-9]*/, "")}
         </p>
-        <p className="text-[11px] text-text-tertiary mt-1.5">累計（以新台幣顯示）</p>
+        <p className="text-[11px] text-text-tertiary mt-1.5">累計（以 {reportingCurrency} 顯示）</p>
       </div>
 
       {/* Monthly breakdown */}
@@ -92,7 +94,7 @@ export function CategoryDetail() {
                     <span className={`text-[13px] font-medium amount-large ${
                       category.type === "income" ? "text-income" : "text-text-primary"
                     }`}>
-                      {formatWithSymbol(amount, "TWD")}
+                      {formatWithSymbol(amount, reportingCurrency)}
                     </span>
                   </div>
                   <div className="h-1.5 bg-bg-elevated rounded-full overflow-hidden">

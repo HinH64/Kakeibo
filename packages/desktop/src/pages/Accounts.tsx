@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Plus, MoreHorizontal } from "lucide-react";
 import { useAccountStore } from "../stores/accountStore";
 import { useCurrencyStore } from "../stores/currencyStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { Modal } from "../components/Modal";
 
 export function Accounts() {
   const navigate = useNavigate();
   const { accounts, fetch, create } = useAccountStore();
   const { formatWithSymbol, activeCurrencies, fetchActive } = useCurrencyStore();
+  const { reportingCurrency } = useSettingsStore();
   const [showCreate, setShowCreate] = useState(false);
 
   useEffect(() => {
@@ -52,10 +54,10 @@ export function Accounts() {
       ) : (
         <>
           {assets.length > 0 && (
-            <Section label="資產" total={formatWithSymbol(totalAssets, "TWD")} totalColor="text-income" accounts={assets} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
+            <Section label="資產" total={formatWithSymbol(totalAssets, reportingCurrency)} totalColor="text-income" accounts={assets} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
           )}
           {liabilities.length > 0 && (
-            <Section label="負債" total={formatWithSymbol(totalLiabilities, "TWD")} totalColor="text-expense" accounts={liabilities} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
+            <Section label="負債" total={formatWithSymbol(totalLiabilities, reportingCurrency)} totalColor="text-expense" accounts={liabilities} formatBalance={formatWithSymbol} onAccountClick={(id) => navigate(`/accounts/${id}`)} />
           )}
         </>
       )}

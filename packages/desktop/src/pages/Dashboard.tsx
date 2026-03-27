@@ -5,12 +5,14 @@ import { CategoryIcon } from "../components/CategoryIcon";
 import { useAccountStore } from "../stores/accountStore";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
+import { useSettingsStore } from "../stores/settingsStore";
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { accounts, fetch: fetchAccounts } = useAccountStore();
   const { transactions, spendingByCategory, fetch: fetchTransactions, fetchSpending } = useTransactionStore();
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
+  const { reportingCurrency } = useSettingsStore();
 
   useEffect(() => {
     fetchCurrencies();
@@ -41,10 +43,10 @@ export function Dashboard() {
       <div className="glass-card glow-accent p-6 mb-8">
         <p className="text-text-tertiary text-[12px] uppercase tracking-wider mb-2">淨資產</p>
         <p className="text-[40px] font-bold text-text-primary amount-large leading-none">
-          {formatWithSymbol(totalAssets - totalLiabilities, "TWD")}
+          {formatWithSymbol(totalAssets - totalLiabilities, reportingCurrency)}
         </p>
         <p className="text-text-tertiary text-[12px] mt-3">
-          {accounts.filter((a) => !a.isArchived).length} 個帳戶 · 以新台幣計算
+          {accounts.filter((a) => !a.isArchived).length} 個帳戶 · 以 {reportingCurrency} 計算
         </p>
       </div>
 
@@ -56,7 +58,7 @@ export function Dashboard() {
         >
           <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">收入</p>
           <p className="text-[24px] font-bold text-income amount-large">
-            +{formatWithSymbol(monthIncome, "TWD").replace("NT$", "")}
+            +{formatWithSymbol(monthIncome, reportingCurrency).replace("NT$", "")}
           </p>
         </div>
         <div
@@ -65,7 +67,7 @@ export function Dashboard() {
         >
           <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">支出</p>
           <p className="text-[24px] font-bold text-expense amount-large">
-            -{formatWithSymbol(monthExpense, "TWD").replace("NT$", "")}
+            -{formatWithSymbol(monthExpense, reportingCurrency).replace("NT$", "")}
           </p>
         </div>
         <div
@@ -74,7 +76,7 @@ export function Dashboard() {
         >
           <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">結餘</p>
           <p className="text-[24px] font-bold text-text-primary amount-large">
-            {monthIncome - monthExpense >= 0 ? "+" : ""}{formatWithSymbol(monthIncome - monthExpense, "TWD").replace("NT$", "")}
+            {monthIncome - monthExpense >= 0 ? "+" : ""}{formatWithSymbol(monthIncome - monthExpense, reportingCurrency).replace("NT$", "")}
           </p>
         </div>
       </div>
@@ -129,7 +131,7 @@ export function Dashboard() {
                         <div className="flex items-center justify-between mb-1.5">
                           <span className="text-[12px] text-text-secondary">{cat.categoryName}</span>
                           <span className="text-[12px] font-medium text-text-primary amount-large">
-                            {formatWithSymbol(cat.total, "TWD")}
+                            {formatWithSymbol(cat.total, reportingCurrency)}
                           </span>
                         </div>
                         <div className="h-1.5 bg-bg-elevated rounded-full overflow-hidden">
