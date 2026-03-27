@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -31,7 +31,6 @@ export function Dashboard() {
   const [monthExpense, setMonthExpense] = useState(0);
   const [monthlyTrend, setMonthlyTrend] = useState<{ month: string; income: number; expense: number }[]>([]);
 
-  const [showTable, setShowTable] = useState(false);
 
   useEffect(() => {
     fetchCurrencies();
@@ -105,9 +104,6 @@ export function Dashboard() {
     const label = i === 0 ? "現在" : `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
     return { label, month: monthKey, value, i };
   });
-
-  // Quick-view cards
-  const forecastCards = [0, 1, 3, 6, 12].map((m) => monthlyForecast[m] ?? monthlyForecast[monthlyForecast.length - 1]);
 
   // Targets converted to reporting currency
   const floorTargets = targets
@@ -263,7 +259,7 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* ── Forecast + Targets Card (above 帳戶) ── */}
+      {/* ── Forecast Card (above 帳戶) ── */}
       {monthlySurplus !== 0 && (
         <div className="glass-card p-5 mb-6">
           {/* Header */}
@@ -271,7 +267,7 @@ export function Dashboard() {
             <div>
               <h3 className="text-[13px] font-medium text-text-secondary">資產預測</h3>
               <p className="text-[11px] text-text-tertiary mt-0.5">
-                基於每月預計結餘{" "}
+                每月預計結餘{" "}
                 <span className={`font-medium amount-large ${monthlySurplus >= 0 ? "text-income" : "text-expense"}`}>
                   {monthlySurplus >= 0 ? "+" : ""}{formatWithSymbol(monthlySurplus, reportingCurrency)}
                 </span>
@@ -289,136 +285,68 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* Quick-view summary cards */}
-          <div className="grid grid-cols-5 gap-4 mb-5">
-            {forecastCards.map((p) => (
-              <div key={p.label} className={`rounded-xl p-3 text-center ${p.label === "現在" ? "bg-bg-elevated" : "bg-bg-elevated/60"}`}>
-                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">{p.label}</p>
-                <p className={`text-[13px] font-semibold amount-large ${p.value >= netWorth ? "text-income" : "text-expense"}`}>
-                  {formatWithSymbol(p.value, reportingCurrency)}
+          {/* 3-stat summary row */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {[
+              { label: "現在", value: netWorth, sub: null },
+              { label: "+12 個月", value: monthlyForecast[12]?.value ?? netWorth + monthlySurplus * 12, sub: null },
+              ...(lowestFloor !== null
+                ? [{ label: "距底線（現在）", value: netWorth - lowestFloor, sub: formatWithSymbol(lowestFloor, reportingCurrency) }]
+                : []),
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl bg-bg-elevated/60 px-4 py-3">
+                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">{s.label}</p>
+                <p className={`text-[14px] font-semibold amount-large ${
+                  s.label === "距底線（現在）"
+                    ? s.value >= 0 ? "text-income" : "text-expense"
+                    : "text-text-primary"
+                }`}>
+                  {s.label === "距底線（現在）" && s.value >= 0 ? "+" : ""}
+                  {formatWithSymbol(s.value, reportingCurrency)}
                 </p>
-                {lowestFloor !== null && (
-                  <p className={`text-[10px] mt-0.5 ${p.value >= lowestFloor ? "text-income/60" : "text-expense/80"}`}>
-                    {p.value >= lowestFloor ? "✓" : "↓底線"}
-                  </p>
-                )}
+                {s.sub && <p className="text-[10px] text-text-muted mt-0.5">底線 {s.sub}</p>}
               </div>
             ))}
           </div>
 
-          {/* Area Chart */}
-          <ResponsiveContainer width="100%" height={120}>
-            <AreaChart data={chartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+          {/* Area Chart with Y axis */}
+          <ResponsiveContainer width="100%" height={150}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0.3} />
+                  <stop offset="5%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0.25} />
                   <stop offset="95%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false}
                 interval={Math.floor(chartData.length / 6)} />
+              <YAxis
+                tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false} width={58}
+                tickFormatter={(v) => {
+                  const abs = Math.abs(v);
+                  if (abs >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
+                  if (abs >= 1000) return `${Math.round(v / 1000)}k`;
+                  return String(v);
+                }}
+              />
               <Tooltip formatter={(v: number) => formatWithSymbol(v, reportingCurrency)}
                 contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
                 itemStyle={{ color: "#c8b8a8" }} />
-              {/* Floor target lines */}
               {floorTargets.map((t) => (
                 <ReferenceLine key={t.id} y={t.converted} stroke="#c27258" strokeDasharray="4 2" strokeWidth={1.5}
-                  label={{ value: t.name, fill: "#c27258", fontSize: 10, position: "insideTopRight" }} />
+                  label={{ value: `${t.name} ${formatWithSymbol(t.converted, reportingCurrency)}`, fill: "#c27258", fontSize: 10, position: "insideBottomRight" }} />
               ))}
-              {/* Milestone dots */}
               {milestoneTargets.map((t) =>
                 t.point ? (
-                  <ReferenceDot key={t.id} x={t.point.label}
-                    y={t.converted} r={5} fill="#f0b429" stroke="#1e1c1a" strokeWidth={1.5} />
+                  <ReferenceDot key={t.id} x={t.point.label} y={t.converted}
+                    r={5} fill="#f0b429" stroke="#1e1c1a" strokeWidth={1.5} />
                 ) : null
               )}
               <Area type="monotone" dataKey="value" name="預測資產"
                 stroke={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} strokeWidth={2}
-                fill="url(#forecastGrad)"
-                dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+                fill="url(#forecastGrad)" dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
-
-          {/* Dynamic table toggle */}
-          <button onClick={() => setShowTable(!showTable)}
-            className="mt-4 flex items-center gap-1.5 text-[12px] text-accent-light hover:text-accent transition-colors w-full justify-center py-2 border-t border-border">
-            {showTable ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            動態變化表 {showTable ? "（收起）" : `（${horizon} 個月）`}
-          </button>
-
-          {/* Monthly table */}
-          {showTable && (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-[12px]">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 pr-4 text-text-tertiary font-medium">#</th>
-                    <th className="text-left py-2 pr-4 text-text-tertiary font-medium">月份</th>
-                    <th className="text-right py-2 pr-4 text-text-tertiary font-medium">預計資產</th>
-                    <th className="text-left py-2 pr-4 text-text-tertiary font-medium">計畫事件</th>
-                    {floorTargets.map((t) => (
-                      <th key={t.id} className="text-right py-2 pr-4 text-expense font-medium whitespace-nowrap">
-                        距「{t.name}」
-                      </th>
-                    ))}
-                    {milestoneTargets.map((t) => (
-                      <th key={t.id} className="text-right py-2 text-[#f0b429] font-medium whitespace-nowrap">
-                        「{t.name}」
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/50">
-                  {monthlyForecast.slice(1).map((point, idx) => {
-                    const monthEvents = events.filter((e) => e.month === point.month);
-                    return (
-                      <tr key={point.month} className="hover:bg-bg-card-hover/50 transition-colors">
-                        <td className="py-2 pr-4 text-text-muted">{idx + 1}</td>
-                        <td className="py-2 pr-4 text-text-secondary">{point.label}</td>
-                        <td className="py-2 pr-4 text-right font-medium amount-large text-text-primary">
-                          {formatWithSymbol(point.value, reportingCurrency)}
-                        </td>
-                        <td className="py-2 pr-4 text-text-tertiary">
-                          {monthEvents.length === 0 ? (
-                            <span className="text-text-muted">—</span>
-                          ) : (
-                            monthEvents.map((e) => (
-                              <span key={e.id} className={`mr-2 ${e.amount >= 0 ? "text-income" : "text-expense"}`}>
-                                {e.name} {e.amount >= 0 ? "+" : ""}{formatWithSymbol(e.amount, e.currencyCode)}
-                              </span>
-                            ))
-                          )}
-                        </td>
-                        {floorTargets.map((t) => {
-                          const gap = point.value - t.converted;
-                          return (
-                            <td key={t.id} className={`py-2 pr-4 text-right font-medium amount-large ${gap >= 0 ? "text-income" : "text-expense"}`}>
-                              {gap >= 0 ? "+" : ""}{formatWithSymbol(gap, reportingCurrency)}
-                            </td>
-                          );
-                        })}
-                        {milestoneTargets.map((t) => {
-                          const isMilestoneMonth = t.targetMonth === point.month;
-                          const gap = point.value - t.converted;
-                          return (
-                            <td key={t.id} className="py-2 text-right">
-                              {isMilestoneMonth ? (
-                                <span className={`font-semibold amount-large ${gap >= 0 ? "text-income" : "text-expense"}`}>
-                                  {gap >= 0 ? "✓ +" : "✗ "}{formatWithSymbol(Math.abs(gap), reportingCurrency)}
-                                </span>
-                              ) : (
-                                <span className="text-text-muted">—</span>
-                              )}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       )}
 
