@@ -132,10 +132,6 @@ export function Dashboard() {
   }));
   const monthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`;
 
-  const lowestFloor = floorTargets.length > 0
-    ? Math.min(...floorTargets.map((t) => t.converted))
-    : null;
-
   return (
     <div className="p-8 animate-fade-in">
 
@@ -283,30 +279,6 @@ export function Dashboard() {
                 調整預算 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
-          </div>
-
-          {/* 3-stat summary row */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {[
-              { label: "現在", value: netWorth, sub: null },
-              { label: "+12 個月", value: monthlyForecast[12]?.value ?? netWorth + monthlySurplus * 12, sub: null },
-              ...(lowestFloor !== null
-                ? [{ label: "距底線（現在）", value: netWorth - lowestFloor, sub: formatWithSymbol(lowestFloor, reportingCurrency) }]
-                : []),
-            ].map((s) => (
-              <div key={s.label} className="rounded-xl bg-bg-elevated/60 px-4 py-3">
-                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">{s.label}</p>
-                <p className={`text-[14px] font-semibold amount-large ${
-                  s.label === "距底線（現在）"
-                    ? s.value >= 0 ? "text-income" : "text-expense"
-                    : "text-text-primary"
-                }`}>
-                  {s.label === "距底線（現在）" && s.value >= 0 ? "+" : ""}
-                  {formatWithSymbol(s.value, reportingCurrency)}
-                </p>
-                {s.sub && <p className="text-[10px] text-text-muted mt-0.5">底線 {s.sub}</p>}
-              </div>
-            ))}
           </div>
 
           {/* Area Chart with Y axis */}
