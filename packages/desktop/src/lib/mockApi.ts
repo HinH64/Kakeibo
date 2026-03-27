@@ -85,6 +85,8 @@ const budgetData: any[] = [
   { id: "bud-3", categoryId: "cat-shopping", currencyCode: "TWD", amount: 5000, period: "monthly", startDate: "2026-01-01", isActive: true },
   { id: "bud-4", categoryId: "cat-entertainment", currencyCode: "TWD", amount: 3000, period: "monthly", startDate: "2026-01-01", isActive: true },
   { id: "bud-5", categoryId: "cat-subscriptions", currencyCode: "TWD", amount: 1000, period: "monthly", startDate: "2026-01-01", isActive: true },
+  { id: "bud-6", categoryId: "cat-salary", currencyCode: "TWD", amount: 55000, period: "monthly", startDate: "2026-01-01", isActive: true },
+  { id: "bud-7", categoryId: "cat-freelance", currencyCode: "TWD", amount: 8000, period: "monthly", startDate: "2026-01-01", isActive: true },
 ];
 
 // ─── Settings ────────────────────────────────────────────────────────────────

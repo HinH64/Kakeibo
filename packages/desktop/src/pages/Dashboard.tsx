@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area,
 } from "recharts";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { useAccountStore } from "../stores/accountStore";
@@ -11,6 +12,7 @@ import { useTransactionStore } from "../stores/transactionStore";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useExchangeRateStore } from "../stores/exchangeRateStore";
+import { useBudgetStore } from "../stores/budgetStore";
 import { api } from "../lib/api";
 
 export function Dashboard() {
@@ -21,6 +23,8 @@ export function Dashboard() {
   const { reportingCurrency } = useSettingsStore();
   const { convert } = useExchangeRateStore();
 
+  const { budgets, fetch: fetchBudgets } = useBudgetStore();
+  const [allCategories, setAllCategories] = useState<{ id: string; type: string }[]>([]);
   const [monthIncome, setMonthIncome] = useState(0);
   const [monthExpense, setMonthExpense] = useState(0);
   const [monthlyTrend, setMonthlyTrend] = useState<{ month: string; income: number; expense: number }[]>([]);
@@ -42,6 +46,13 @@ export function Dashboard() {
     api.transactions.monthlyTrend(undefined, 6).then((trend) => {
       setMonthlyTrend(trend as { month: string; income: number; expense: number }[]);
     });
+    fetchBudgets();
+    Promise.all([
+      api.categories.list({ type: "income" }),
+      api.categories.list({ type: "expense" }),
+    ]).then(([inc, exp]) => {
+      setAllCategories([...(inc ?? []), ...(exp ?? [])] as { id: string; type: string }[]);
+    });
   }, []);
 
   const activeAccounts = accounts.filter((a) => !a.isArchived);
@@ -53,6 +64,22 @@ export function Dashboard() {
     .filter((a) => a.type === "liability" && !a.isArchived)
     .reduce((s, a) => s + convert(a.balance, a.currencyCode, reportingCurrency), 0);
   const netWorth = totalAssets - totalLiabilities;
+
+  // Budget-based forecast
+  const catTypeMap = new Map(allCategories.map((c) => [c.id, c.type]));
+  const activeBudgets = budgets.filter((b) => b.isActive);
+  const monthlyIncomeBudget = activeBudgets
+    .filter((b) => catTypeMap.get(b.categoryId) === "income")
+    .reduce((s, b) => s + b.amount, 0);
+  const monthlyExpenseBudget = activeBudgets
+    .filter((b) => catTypeMap.get(b.categoryId) === "expense")
+    .reduce((s, b) => s + b.amount, 0);
+  const monthlySurplus = monthlyIncomeBudget - monthlyExpenseBudget;
+
+  const forecastPoints = [0, 1, 3, 6, 12].map((m) => ({
+    label: m === 0 ? "現在" : `+${m}月`,
+    value: netWorth + monthlySurplus * m,
+  }));
 
   const formatMonth = (m: string) => `${parseInt(m.split("-")[1])}月`;
 
@@ -323,6 +350,62 @@ export function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* ── Forecast Card ── */}
+      {monthlySurplus !== 0 && (
+        <div className="glass-card p-5 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-[13px] font-medium text-text-secondary">資產預測</h3>
+              <p className="text-[11px] text-text-tertiary mt-0.5">
+                基於每月預計結餘 <span className={`font-medium amount-large ${monthlySurplus >= 0 ? "text-income" : "text-expense"}`}>
+                  {monthlySurplus >= 0 ? "+" : ""}{formatWithSymbol(monthlySurplus, reportingCurrency)}
+                </span>
+              </p>
+            </div>
+            <button onClick={() => navigate("/budgets")} className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+              調整預算 <ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-5 gap-4 mb-5">
+            {forecastPoints.map((p) => (
+              <div key={p.label} className={`rounded-xl p-3 text-center ${p.label === "現在" ? "bg-bg-elevated" : "bg-bg-elevated/60"}`}>
+                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">{p.label}</p>
+                <p className={`text-[13px] font-semibold amount-large ${p.value >= netWorth ? "text-income" : "text-expense"}`}>
+                  {formatWithSymbol(p.value, reportingCurrency)}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <ResponsiveContainer width="100%" height={100}>
+            <AreaChart data={forecastPoints} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
+              <defs>
+                <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false} />
+              <Tooltip
+                formatter={(value: number) => formatWithSymbol(value, reportingCurrency)}
+                contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
+                itemStyle={{ color: "#c8b8a8" }}
+              />
+              <Area
+                type="monotone"
+                dataKey="value"
+                name="預測資產"
+                stroke={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"}
+                strokeWidth={2}
+                fill="url(#forecastGrad)"
+                dot={{ fill: monthlySurplus >= 0 ? "#6b9a6b" : "#c27258", r: 3, strokeWidth: 0 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
     </div>
   );
 }
