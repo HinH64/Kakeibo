@@ -35,12 +35,10 @@ export function Dashboard() {
     const monthEnd = now.toISOString().slice(0, 10);
 
     fetchSpending(monthStart, monthEnd);
-
     api.transactions.monthStats(monthStart, monthEnd).then(({ income, expense }) => {
       setMonthIncome(income);
       setMonthExpense(expense);
     });
-
     api.transactions.monthlyTrend(undefined, 6).then((trend) => {
       setMonthlyTrend(trend as { month: string; income: number; expense: number }[]);
     });
@@ -54,22 +52,14 @@ export function Dashboard() {
   const totalLiabilities = accounts
     .filter((a) => a.type === "liability" && !a.isArchived)
     .reduce((s, a) => s + convert(a.balance, a.currencyCode, reportingCurrency), 0);
-
   const netWorth = totalAssets - totalLiabilities;
 
-  // Format month label for bar chart (e.g. "2026-03" → "3月")
-  const formatMonth = (m: string) => {
-    const parts = m.split("-");
-    return `${parseInt(parts[1])}月`;
-  };
-
-  // Scale amounts for chart display (divide by smallest unit for readability)
-  const chartDivisor = reportingCurrency === "JPY" || reportingCurrency === "TWD" || reportingCurrency === "KRW" ? 1000 : 100;
+  const formatMonth = (m: string) => `${parseInt(m.split("-")[1])}月`;
 
   const trendData = monthlyTrend.map((d) => ({
     month: formatMonth(d.month),
-    income: Math.round(d.income / chartDivisor),
-    expense: Math.round(d.expense / chartDivisor),
+    income: d.income,
+    expense: d.expense,
   }));
 
   const pieData = spendingByCategory.slice(0, 6).map((cat) => ({
@@ -78,128 +68,158 @@ export function Dashboard() {
     color: cat.categoryColor,
   }));
 
+  const now = new Date();
+  const monthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+
   return (
-    <div className="p-8 max-w-[960px] animate-fade-in">
-      {/* Net Worth Hero */}
-      <div className="glass-card glow-accent p-6 mb-6">
-        <p className="text-text-tertiary text-[12px] uppercase tracking-wider mb-2">淨資產</p>
-        <p className="text-[40px] font-bold text-text-primary amount-large leading-none">
-          {formatWithSymbol(netWorth, reportingCurrency)}
-        </p>
-        <p className="text-text-tertiary text-[12px] mt-3">
-          {activeAccounts.length} 個帳戶 · 以 {reportingCurrency} 計算
-        </p>
-      </div>
+    <div className="p-8 animate-fade-in">
 
-      {/* Month Summary Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div onClick={() => navigate("/transactions")} className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors">
-          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">本月收入</p>
-          <p className="text-[24px] font-bold text-income amount-large">
-            +{formatWithSymbol(monthIncome, reportingCurrency)}
-          </p>
-        </div>
-        <div onClick={() => navigate("/transactions")} className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors">
-          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">本月支出</p>
-          <p className="text-[24px] font-bold text-expense amount-large">
-            -{formatWithSymbol(monthExpense, reportingCurrency)}
-          </p>
-        </div>
-        <div onClick={() => navigate("/transactions")} className="glass-card p-5 cursor-pointer hover:bg-bg-card-hover transition-colors">
-          <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-1.5">本月結餘</p>
-          <p className={`text-[24px] font-bold amount-large ${monthIncome - monthExpense >= 0 ? "text-income" : "text-expense"}`}>
-            {monthIncome - monthExpense >= 0 ? "+" : "-"}
-            {formatWithSymbol(Math.abs(monthIncome - monthExpense), reportingCurrency)}
-          </p>
-        </div>
-      </div>
+      {/* ── Row 1: Net Worth + Month Stats (left) | Pie Chart (right) ── */}
+      <div className="grid grid-cols-5 gap-6 mb-6">
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        {/* Pie: spending by category */}
-        <div className="glass-card p-5">
-          <h3 className="text-[13px] font-medium text-text-secondary mb-4">本月支出分布</h3>
-          {pieData.length === 0 ? (
-            <div className="h-[180px] flex items-center justify-center">
-              <p className="text-[13px] text-text-muted">本月尚無支出</p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-4">
-              <ResponsiveContainer width={160} height={160}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={45}
-                    outerRadius={72}
-                    paddingAngle={2}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} opacity={0.85} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => formatWithSymbol(value, reportingCurrency)}
-                    contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
-                    itemStyle={{ color: "#c8b8a8" }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex-1 space-y-2 min-w-0">
-                {pieData.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2 min-w-0">
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                    <span className="text-[11px] text-text-tertiary truncate flex-1">{d.name}</span>
-                    <span className="text-[11px] font-medium text-text-secondary amount-large shrink-0">
-                      {formatWithSymbol(d.value, reportingCurrency)}
-                    </span>
-                  </div>
-                ))}
+        {/* Left 2/5: Net worth hero + month summary */}
+        <div className="col-span-2 flex flex-col gap-4">
+          <div className="glass-card glow-accent p-6 flex-1">
+            <p className="text-text-tertiary text-[11px] uppercase tracking-wider mb-2">淨資產</p>
+            <p className="text-[36px] font-bold text-text-primary amount-large leading-none mb-1">
+              {formatWithSymbol(netWorth, reportingCurrency)}
+            </p>
+            <p className="text-text-tertiary text-[11px] mt-2">
+              {activeAccounts.length} 個帳戶 · 以 {reportingCurrency} 計算
+            </p>
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-0.5">資產</p>
+                <p className="text-[15px] font-semibold text-income amount-large">
+                  {formatWithSymbol(totalAssets, reportingCurrency)}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-0.5">負債</p>
+                <p className="text-[15px] font-semibold text-expense amount-large">
+                  {formatWithSymbol(totalLiabilities, reportingCurrency)}
+                </p>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Month summary row */}
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: "本月收入", value: monthIncome, color: "text-income", prefix: "+" },
+              { label: "本月支出", value: monthExpense, color: "text-expense", prefix: "-" },
+              { label: "本月結餘", value: Math.abs(monthIncome - monthExpense), color: monthIncome >= monthExpense ? "text-income" : "text-expense", prefix: monthIncome >= monthExpense ? "+" : "-" },
+            ].map((card) => (
+              <div
+                key={card.label}
+                onClick={() => navigate("/transactions")}
+                className="glass-card p-4 cursor-pointer hover:bg-bg-card-hover transition-colors"
+              >
+                <p className="text-text-tertiary text-[10px] uppercase tracking-wider mb-1.5">{card.label}</p>
+                <p className={`text-[14px] font-bold amount-large ${card.color}`}>
+                  {card.prefix}{formatWithSymbol(card.value, reportingCurrency)}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Bar: monthly income vs expense trend */}
-        <div className="glass-card p-5">
-          <h3 className="text-[13px] font-medium text-text-secondary mb-4">近 6 個月趨勢</h3>
-          {trendData.every((d) => d.income === 0 && d.expense === 0) ? (
-            <div className="h-[160px] flex items-center justify-center">
-              <p className="text-[13px] text-text-muted">暫無資料</p>
+        {/* Right 3/5: Pie + Bar charts side by side */}
+        <div className="col-span-3 grid grid-cols-2 gap-6">
+
+          {/* Pie: spending by category */}
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[13px] font-medium text-text-secondary">本月支出分布</h3>
+              <span className="text-[11px] text-text-tertiary">{monthLabel}</span>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={trendData} barCategoryGap="30%" barGap={2}>
-                <CartesianGrid vertical={false} stroke="#3a3530" strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#7a756b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false} width={36} />
-                <Tooltip
-                  formatter={(value: number) => `${value.toLocaleString()}`}
-                  contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
-                  itemStyle={{ color: "#c8b8a8" }}
-                  cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                />
-                <Bar dataKey="income" name="收入" fill="#6b9a6b" radius={[3, 3, 0, 0]} opacity={0.85} />
-                <Bar dataKey="expense" name="支出" fill="#c27258" radius={[3, 3, 0, 0]} opacity={0.85} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-          <div className="flex gap-4 mt-2">
-            <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
-              <span className="w-2 h-2 rounded-full bg-income" />收入
-            </span>
-            <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
-              <span className="w-2 h-2 rounded-full bg-expense" />支出
-            </span>
+            {pieData.length === 0 ? (
+              <div className="h-[180px] flex items-center justify-center">
+                <p className="text-[13px] text-text-muted">本月尚無支出</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <ResponsiveContainer width="100%" height={140}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={42}
+                      outerRadius={65}
+                      paddingAngle={2}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} opacity={0.85} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => formatWithSymbol(value, reportingCurrency)}
+                      contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
+                      itemStyle={{ color: "#c8b8a8" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1.5">
+                  {pieData.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                      <span className="text-[11px] text-text-tertiary truncate flex-1">{d.name}</span>
+                      <span className="text-[11px] font-medium text-text-secondary amount-large shrink-0">
+                        {formatWithSymbol(d.value, reportingCurrency)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Bar: monthly trend */}
+          <div className="glass-card p-5">
+            <h3 className="text-[13px] font-medium text-text-secondary mb-4">近 6 個月趨勢</h3>
+            {trendData.every((d) => d.income === 0 && d.expense === 0) ? (
+              <div className="h-[180px] flex items-center justify-center">
+                <p className="text-[13px] text-text-muted">暫無資料</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={180}>
+                  <BarChart data={trendData} barCategoryGap="28%" barGap={2}>
+                    <CartesianGrid vertical={false} stroke="#3a3530" strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#7a756b" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false} width={40}
+                      tickFormatter={(v) => v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)} />
+                    <Tooltip
+                      formatter={(value: number) => formatWithSymbol(value, reportingCurrency)}
+                      contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
+                      itemStyle={{ color: "#c8b8a8" }}
+                      cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                    />
+                    <Bar dataKey="income" name="收入" fill="#6b9a6b" radius={[3, 3, 0, 0]} opacity={0.85} />
+                    <Bar dataKey="expense" name="支出" fill="#c27258" radius={[3, 3, 0, 0]} opacity={0.85} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div className="flex gap-4 mt-2">
+                  <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
+                    <span className="w-2 h-2 rounded-full bg-income" />收入
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary">
+                    <span className="w-2 h-2 rounded-full bg-expense" />支出
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
+      {/* ── Row 2: Accounts + Spending bars (left) | Recent Transactions (right) ── */}
       <div className="grid grid-cols-5 gap-6">
-        {/* Left: Accounts + Spending bars */}
+
+        {/* Accounts + spending category bars */}
         <div className="col-span-3 space-y-6">
           <section>
             <div className="flex items-center justify-between mb-3">
@@ -239,7 +259,6 @@ export function Dashboard() {
             </div>
           </section>
 
-          {/* Spending by category bars */}
           <section>
             <h3 className="text-[13px] font-medium text-text-secondary mb-3">本月支出</h3>
             <div className="glass-card p-4 space-y-4">
@@ -273,7 +292,7 @@ export function Dashboard() {
           </section>
         </div>
 
-        {/* Right: Recent Transactions */}
+        {/* Recent Transactions */}
         <div className="col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[13px] font-medium text-text-secondary">近期交易</h3>
@@ -285,16 +304,16 @@ export function Dashboard() {
             {transactions.length === 0 ? (
               <p className="py-8 text-center text-[13px] text-text-muted">尚無交易紀錄</p>
             ) : (
-              transactions.slice(0, 8).map((txn) => (
+              transactions.slice(0, 10).map((txn) => (
                 <div key={txn.id} onClick={() => navigate(`/transactions/${txn.id}`)} className="flex items-center justify-between py-3 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-2.5 min-w-0">
                     <CategoryIcon iconId={txn.categoryIcon ?? "other-expense"} color="#7a756b" size="sm" />
-                    <div>
-                      <p className="text-[13px] text-text-primary">{txn.note || txn.categoryName || "交易"}</p>
-                      <p className="text-[11px] text-text-tertiary">{txn.categoryName} · {txn.date}</p>
+                    <div className="min-w-0">
+                      <p className="text-[13px] text-text-primary truncate">{txn.note || txn.categoryName || "交易"}</p>
+                      <p className="text-[11px] text-text-tertiary">{txn.categoryName ?? "轉帳"} · {txn.date}</p>
                     </div>
                   </div>
-                  <p className={`text-[13px] font-medium amount-large ${txn.type === "income" ? "text-income" : "text-text-primary"}`}>
+                  <p className={`text-[13px] font-medium amount-large shrink-0 ml-2 ${txn.type === "income" ? "text-income" : txn.type === "transfer" ? "text-transfer" : "text-text-primary"}`}>
                     {txn.type === "income" ? "+" : txn.type === "expense" ? "-" : ""}
                     {formatWithSymbol(txn.amount, txn.accountCurrency)}
                   </p>
