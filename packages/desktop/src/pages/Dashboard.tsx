@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Plus, Trash2, X, ChevronDown, ChevronUp } from "lucide-react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  AreaChart, Area,
+  AreaChart, Area, ReferenceLine, ReferenceDot,
 } from "recharts";
 import { CategoryIcon } from "../components/CategoryIcon";
 import { useAccountStore } from "../stores/accountStore";
@@ -13,7 +13,12 @@ import { useCurrencyStore } from "../stores/currencyStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useExchangeRateStore } from "../stores/exchangeRateStore";
 import { useBudgetStore } from "../stores/budgetStore";
+import { useTargetStore, type FinancialTarget, type PlannedEvent } from "../stores/targetStore";
 import { api } from "../lib/api";
+
+const EMPTY_TARGET: { name: string; type: "floor" | "milestone"; amount: string; currencyCode: string; targetMonth: string } =
+  { name: "", type: "floor", amount: "", currencyCode: "", targetMonth: "" };
+const EMPTY_EVENT = { name: "", amount: "", currencyCode: "", month: "" };
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -22,12 +27,20 @@ export function Dashboard() {
   const { formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { reportingCurrency } = useSettingsStore();
   const { convert } = useExchangeRateStore();
-
   const { budgets, fetch: fetchBudgets } = useBudgetStore();
+  const { targets, events, addTarget, removeTarget, addEvent, removeEvent } = useTargetStore();
+
   const [allCategories, setAllCategories] = useState<{ id: string; type: string }[]>([]);
   const [monthIncome, setMonthIncome] = useState(0);
   const [monthExpense, setMonthExpense] = useState(0);
   const [monthlyTrend, setMonthlyTrend] = useState<{ month: string; income: number; expense: number }[]>([]);
+
+  // Target form state
+  const [showTargetForm, setShowTargetForm] = useState(false);
+  const [targetForm, setTargetForm] = useState(EMPTY_TARGET);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventForm, setEventForm] = useState(EMPTY_EVENT);
+  const [showTable, setShowTable] = useState(false);
 
   useEffect(() => {
     fetchCurrencies();
@@ -55,8 +68,8 @@ export function Dashboard() {
     });
   }, []);
 
+  // Net worth
   const activeAccounts = accounts.filter((a) => !a.isArchived);
-
   const totalAssets = accounts
     .filter((a) => a.type === "asset" && !a.isArchived)
     .reduce((s, a) => s + convert(a.balance, a.currencyCode, reportingCurrency), 0);
@@ -65,7 +78,7 @@ export function Dashboard() {
     .reduce((s, a) => s + convert(a.balance, a.currencyCode, reportingCurrency), 0);
   const netWorth = totalAssets - totalLiabilities;
 
-  // Budget-based forecast
+  // Budget-based monthly surplus
   const catTypeMap = new Map(allCategories.map((c) => [c.id, c.type]));
   const activeBudgets = budgets.filter((b) => b.isActive);
   const monthlyIncomeBudget = activeBudgets
@@ -76,32 +89,95 @@ export function Dashboard() {
     .reduce((s, b) => s + b.amount, 0);
   const monthlySurplus = monthlyIncomeBudget - monthlyExpenseBudget;
 
-  const forecastPoints = [0, 1, 3, 6, 12].map((m) => ({
-    label: m === 0 ? "現在" : `+${m}月`,
-    value: netWorth + monthlySurplus * m,
-  }));
+  // Forecast horizon: cover furthest milestone + 2, minimum 12 months
+  const now = new Date();
+  const milestoneOffsets = targets
+    .filter((t) => t.type === "milestone" && t.targetMonth)
+    .map((t) => {
+      const [y, m] = t.targetMonth!.split("-").map(Number);
+      return (y - now.getFullYear()) * 12 + (m - (now.getMonth() + 1));
+    })
+    .filter((m) => m >= 0);
+  const horizon = Math.max(12, ...milestoneOffsets) + 2;
+
+  // Build cumulative monthly forecast (with planned events)
+  const monthlyForecast = Array.from({ length: horizon + 1 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    let value = netWorth + monthlySurplus * i;
+    // Add all planned events up to and including this month
+    for (const evt of events) {
+      if (evt.month <= monthKey) {
+        value += convert(evt.amount, evt.currencyCode, reportingCurrency);
+      }
+    }
+    const label = i === 0 ? "現在" : `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return { label, month: monthKey, value, i };
+  });
+
+  // Quick-view cards
+  const forecastCards = [0, 1, 3, 6, 12].map((m) => monthlyForecast[m] ?? monthlyForecast[monthlyForecast.length - 1]);
+
+  // Targets converted to reporting currency
+  const floorTargets = targets
+    .filter((t) => t.type === "floor")
+    .map((t) => ({ ...t, converted: convert(t.amount, t.currencyCode, reportingCurrency) }));
+  const milestoneTargets = targets
+    .filter((t) => t.type === "milestone" && t.targetMonth)
+    .map((t) => {
+      const point = monthlyForecast.find((p) => p.month === t.targetMonth);
+      return { ...t, converted: convert(t.amount, t.currencyCode, reportingCurrency), point };
+    });
+
+  // Chart data (monthly, for smooth curve)
+  const chartData = monthlyForecast.map((p) => ({ label: p.label, value: p.value }));
 
   const formatMonth = (m: string) => `${parseInt(m.split("-")[1])}月`;
-
   const trendData = monthlyTrend.map((d) => ({
     month: formatMonth(d.month),
     income: d.income,
     expense: d.expense,
   }));
-
   const pieData = spendingByCategory.slice(0, 6).map((cat) => ({
     name: cat.categoryName,
     value: cat.total,
     color: cat.categoryColor,
   }));
-
-  const now = new Date();
   const monthLabel = `${now.getFullYear()}年${now.getMonth() + 1}月`;
+
+  const handleAddTarget = () => {
+    if (!targetForm.name || !targetForm.amount || !targetForm.currencyCode) return;
+    addTarget({
+      name: targetForm.name,
+      type: targetForm.type,
+      amount: parseFloat(targetForm.amount),
+      currencyCode: targetForm.currencyCode.toUpperCase(),
+      targetMonth: targetForm.type === "milestone" ? targetForm.targetMonth || undefined : undefined,
+    });
+    setTargetForm(EMPTY_TARGET);
+    setShowTargetForm(false);
+  };
+
+  const handleAddEvent = () => {
+    if (!eventForm.name || !eventForm.amount || !eventForm.currencyCode || !eventForm.month) return;
+    addEvent({
+      name: eventForm.name,
+      amount: parseFloat(eventForm.amount),
+      currencyCode: eventForm.currencyCode.toUpperCase(),
+      month: eventForm.month,
+    });
+    setEventForm(EMPTY_EVENT);
+    setShowEventForm(false);
+  };
+
+  const lowestFloor = floorTargets.length > 0
+    ? Math.min(...floorTargets.map((t) => t.converted))
+    : null;
 
   return (
     <div className="p-8 animate-fade-in">
 
-      {/* ── Row 1: Net Worth + Month Stats (left) | Pie Chart (right) ── */}
+      {/* ── Row 1: Net Worth + Month Stats (left) | Charts (right) ── */}
       <div className="grid grid-cols-5 gap-6 mb-6">
 
         {/* Left 2/5: Net worth hero + month summary */}
@@ -130,18 +206,14 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* Month summary row */}
           <div className="grid grid-cols-3 gap-3">
             {[
               { label: "本月收入", value: monthIncome, color: "text-income", prefix: "+" },
               { label: "本月支出", value: monthExpense, color: "text-expense", prefix: "-" },
               { label: "本月結餘", value: Math.abs(monthIncome - monthExpense), color: monthIncome >= monthExpense ? "text-income" : "text-expense", prefix: monthIncome >= monthExpense ? "+" : "-" },
             ].map((card) => (
-              <div
-                key={card.label}
-                onClick={() => navigate("/transactions")}
-                className="glass-card p-4 cursor-pointer hover:bg-bg-card-hover transition-colors"
-              >
+              <div key={card.label} onClick={() => navigate("/transactions")}
+                className="glass-card p-4 cursor-pointer hover:bg-bg-card-hover transition-colors">
                 <p className="text-text-tertiary text-[10px] uppercase tracking-wider mb-1.5">{card.label}</p>
                 <p className={`text-[14px] font-bold amount-large ${card.color}`}>
                   {card.prefix}{formatWithSymbol(card.value, reportingCurrency)}
@@ -151,10 +223,8 @@ export function Dashboard() {
           </div>
         </div>
 
-        {/* Right 3/5: Pie + Bar charts side by side */}
+        {/* Right 3/5: Pie + Bar charts */}
         <div className="col-span-3 grid grid-cols-2 gap-6">
-
-          {/* Pie: spending by category */}
           <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[13px] font-medium text-text-secondary">本月支出分布</h3>
@@ -168,25 +238,13 @@ export function Dashboard() {
               <div className="flex flex-col gap-3">
                 <ResponsiveContainer width="100%" height={140}>
                   <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={42}
-                      outerRadius={65}
-                      paddingAngle={2}
-                      dataKey="value"
-                      strokeWidth={0}
-                    >
-                      {pieData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} opacity={0.85} />
-                      ))}
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={42} outerRadius={65}
+                      paddingAngle={2} dataKey="value" strokeWidth={0}>
+                      {pieData.map((entry, i) => <Cell key={i} fill={entry.color} opacity={0.85} />)}
                     </Pie>
-                    <Tooltip
-                      formatter={(value: number) => formatWithSymbol(value, reportingCurrency)}
+                    <Tooltip formatter={(v: number) => formatWithSymbol(v, reportingCurrency)}
                       contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
-                      itemStyle={{ color: "#c8b8a8" }}
-                    />
+                      itemStyle={{ color: "#c8b8a8" }} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-1.5">
@@ -204,7 +262,6 @@ export function Dashboard() {
             )}
           </div>
 
-          {/* Bar: monthly trend */}
           <div className="glass-card p-5">
             <h3 className="text-[13px] font-medium text-text-secondary mb-4">近 6 個月趨勢</h3>
             {trendData.every((d) => d.income === 0 && d.expense === 0) ? (
@@ -219,12 +276,9 @@ export function Dashboard() {
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#7a756b" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false} width={40}
                       tickFormatter={(v) => v >= 1000 ? `${Math.round(v / 1000)}k` : String(v)} />
-                    <Tooltip
-                      formatter={(value: number) => formatWithSymbol(value, reportingCurrency)}
+                    <Tooltip formatter={(v: number) => formatWithSymbol(v, reportingCurrency)}
                       contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
-                      itemStyle={{ color: "#c8b8a8" }}
-                      cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                    />
+                      itemStyle={{ color: "#c8b8a8" }} cursor={{ fill: "rgba(255,255,255,0.04)" }} />
                     <Bar dataKey="income" name="收入" fill="#6b9a6b" radius={[3, 3, 0, 0]} opacity={0.85} />
                     <Bar dataKey="expense" name="支出" fill="#c27258" radius={[3, 3, 0, 0]} opacity={0.85} />
                   </BarChart>
@@ -243,15 +297,233 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* ── Forecast + Targets Card (above 帳戶) ── */}
+      {monthlySurplus !== 0 && (
+        <div className="glass-card p-5 mb-6">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-[13px] font-medium text-text-secondary">資產預測</h3>
+              <p className="text-[11px] text-text-tertiary mt-0.5">
+                基於每月預計結餘{" "}
+                <span className={`font-medium amount-large ${monthlySurplus >= 0 ? "text-income" : "text-expense"}`}>
+                  {monthlySurplus >= 0 ? "+" : ""}{formatWithSymbol(monthlySurplus, reportingCurrency)}
+                </span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowTargetForm(true)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[12px] bg-bg-elevated text-text-secondary hover:bg-bg-card-hover transition-colors">
+                <Plus className="w-3.5 h-3.5" />新增目標
+              </button>
+              <button onClick={() => navigate("/budgets")}
+                className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+                調整預算 <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick-view summary cards */}
+          <div className="grid grid-cols-5 gap-4 mb-5">
+            {forecastCards.map((p) => (
+              <div key={p.label} className={`rounded-xl p-3 text-center ${p.label === "現在" ? "bg-bg-elevated" : "bg-bg-elevated/60"}`}>
+                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">{p.label}</p>
+                <p className={`text-[13px] font-semibold amount-large ${p.value >= netWorth ? "text-income" : "text-expense"}`}>
+                  {formatWithSymbol(p.value, reportingCurrency)}
+                </p>
+                {lowestFloor !== null && (
+                  <p className={`text-[10px] mt-0.5 ${p.value >= lowestFloor ? "text-income/60" : "text-expense/80"}`}>
+                    {p.value >= lowestFloor ? "✓" : "↓底線"}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Area Chart */}
+          <ResponsiveContainer width="100%" height={120}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
+              <defs>
+                <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0.3} />
+                  <stop offset="95%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false}
+                interval={Math.floor(chartData.length / 6)} />
+              <Tooltip formatter={(v: number) => formatWithSymbol(v, reportingCurrency)}
+                contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
+                itemStyle={{ color: "#c8b8a8" }} />
+              {/* Floor target lines */}
+              {floorTargets.map((t) => (
+                <ReferenceLine key={t.id} y={t.converted} stroke="#c27258" strokeDasharray="4 2" strokeWidth={1.5}
+                  label={{ value: t.name, fill: "#c27258", fontSize: 10, position: "insideTopRight" }} />
+              ))}
+              {/* Milestone dots */}
+              {milestoneTargets.map((t) =>
+                t.point ? (
+                  <ReferenceDot key={t.id} x={t.point.label}
+                    y={t.converted} r={5} fill="#f0b429" stroke="#1e1c1a" strokeWidth={1.5} />
+                ) : null
+              )}
+              <Area type="monotone" dataKey="value" name="預測資產"
+                stroke={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} strokeWidth={2}
+                fill="url(#forecastGrad)"
+                dot={false} activeDot={{ r: 4, strokeWidth: 0 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+
+          {/* Targets & Events list */}
+          {(targets.length > 0 || events.length > 0) && (
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-4">
+              {targets.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-2">目標</p>
+                  <div className="space-y-1.5">
+                    {targets.map((t) => (
+                      <div key={t.id} className="flex items-center gap-2 group">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${t.type === "floor" ? "bg-expense" : "bg-[#f0b429]"}`} />
+                        <span className="text-[12px] text-text-secondary flex-1 truncate">
+                          {t.type === "floor" ? "底線" : "里程碑"}: {t.name}
+                        </span>
+                        <span className="text-[12px] font-medium text-text-primary amount-large shrink-0">
+                          {formatWithSymbol(t.amount, t.currencyCode)}
+                        </span>
+                        {t.targetMonth && (
+                          <span className="text-[11px] text-text-tertiary shrink-0">{t.targetMonth}</span>
+                        )}
+                        <button onClick={() => removeTarget(t.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="w-3.5 h-3.5 text-expense" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {events.length > 0 && (
+                <div>
+                  <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-2">計畫事件</p>
+                  <div className="space-y-1.5">
+                    {events.map((e) => (
+                      <div key={e.id} className="flex items-center gap-2 group">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${e.amount >= 0 ? "bg-income" : "bg-expense"}`} />
+                        <span className="text-[12px] text-text-secondary flex-1 truncate">{e.name}</span>
+                        <span className={`text-[12px] font-medium amount-large shrink-0 ${e.amount >= 0 ? "text-income" : "text-expense"}`}>
+                          {e.amount >= 0 ? "+" : ""}{formatWithSymbol(e.amount, e.currencyCode)}
+                        </span>
+                        <span className="text-[11px] text-text-tertiary shrink-0">{e.month}</span>
+                        <button onClick={() => removeEvent(e.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Trash2 className="w-3.5 h-3.5 text-expense" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Add Event button */}
+          <div className="mt-3 flex gap-3">
+            <button onClick={() => setShowEventForm(true)}
+              className="flex items-center gap-1 text-[12px] text-text-tertiary hover:text-text-secondary transition-colors">
+              <Plus className="w-3.5 h-3.5" />新增計畫事件
+            </button>
+          </div>
+
+          {/* Dynamic table toggle */}
+          <button onClick={() => setShowTable(!showTable)}
+            className="mt-4 flex items-center gap-1.5 text-[12px] text-accent-light hover:text-accent transition-colors w-full justify-center py-2 border-t border-border">
+            {showTable ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            動態變化表 {showTable ? "（收起）" : `（${horizon} 個月）`}
+          </button>
+
+          {/* Monthly table */}
+          {showTable && (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left py-2 pr-4 text-text-tertiary font-medium">#</th>
+                    <th className="text-left py-2 pr-4 text-text-tertiary font-medium">月份</th>
+                    <th className="text-right py-2 pr-4 text-text-tertiary font-medium">預計資產</th>
+                    <th className="text-left py-2 pr-4 text-text-tertiary font-medium">計畫事件</th>
+                    {floorTargets.map((t) => (
+                      <th key={t.id} className="text-right py-2 pr-4 text-expense font-medium whitespace-nowrap">
+                        距「{t.name}」
+                      </th>
+                    ))}
+                    {milestoneTargets.map((t) => (
+                      <th key={t.id} className="text-right py-2 text-[#f0b429] font-medium whitespace-nowrap">
+                        「{t.name}」
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {monthlyForecast.slice(1).map((point, idx) => {
+                    const monthEvents = events.filter((e) => e.month === point.month);
+                    return (
+                      <tr key={point.month} className="hover:bg-bg-card-hover/50 transition-colors">
+                        <td className="py-2 pr-4 text-text-muted">{idx + 1}</td>
+                        <td className="py-2 pr-4 text-text-secondary">{point.label}</td>
+                        <td className="py-2 pr-4 text-right font-medium amount-large text-text-primary">
+                          {formatWithSymbol(point.value, reportingCurrency)}
+                        </td>
+                        <td className="py-2 pr-4 text-text-tertiary">
+                          {monthEvents.length === 0 ? (
+                            <span className="text-text-muted">—</span>
+                          ) : (
+                            monthEvents.map((e) => (
+                              <span key={e.id} className={`mr-2 ${e.amount >= 0 ? "text-income" : "text-expense"}`}>
+                                {e.name} {e.amount >= 0 ? "+" : ""}{formatWithSymbol(e.amount, e.currencyCode)}
+                              </span>
+                            ))
+                          )}
+                        </td>
+                        {floorTargets.map((t) => {
+                          const gap = point.value - t.converted;
+                          return (
+                            <td key={t.id} className={`py-2 pr-4 text-right font-medium amount-large ${gap >= 0 ? "text-income" : "text-expense"}`}>
+                              {gap >= 0 ? "+" : ""}{formatWithSymbol(gap, reportingCurrency)}
+                            </td>
+                          );
+                        })}
+                        {milestoneTargets.map((t) => {
+                          const isMilestoneMonth = t.targetMonth === point.month;
+                          const gap = point.value - t.converted;
+                          return (
+                            <td key={t.id} className="py-2 text-right">
+                              {isMilestoneMonth ? (
+                                <span className={`font-semibold amount-large ${gap >= 0 ? "text-income" : "text-expense"}`}>
+                                  {gap >= 0 ? "✓ +" : "✗ "}{formatWithSymbol(Math.abs(gap), reportingCurrency)}
+                                </span>
+                              ) : (
+                                <span className="text-text-muted">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Row 2: Accounts + Spending bars (left) | Recent Transactions (right) ── */}
       <div className="grid grid-cols-5 gap-6">
-
-        {/* Accounts + spending category bars */}
         <div className="col-span-3 space-y-6">
           <section>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[13px] font-medium text-text-secondary">帳戶</h3>
-              <button onClick={() => navigate("/accounts")} className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+              <button onClick={() => navigate("/accounts")}
+                className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
                 全部 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
@@ -260,7 +532,8 @@ export function Dashboard() {
                 <p className="py-8 text-center text-[13px] text-text-muted">尚未建立帳戶</p>
               ) : (
                 activeAccounts.map((acc) => (
-                  <div key={acc.id} onClick={() => navigate(`/accounts/${acc.id}`)} className="flex items-center justify-between py-3.5 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
+                  <div key={acc.id} onClick={() => navigate(`/accounts/${acc.id}`)}
+                    className="flex items-center justify-between py-3.5 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-xl bg-bg-elevated flex items-center justify-center">
                         <span className="text-[13px] text-text-secondary font-medium">{acc.currencyCode.slice(0, 2)}</span>
@@ -295,7 +568,8 @@ export function Dashboard() {
                 spendingByCategory.map((cat) => {
                   const maxTotal = spendingByCategory[0]?.total ?? 1;
                   return (
-                    <div key={cat.categoryId} onClick={() => navigate(`/categories/${cat.categoryId}`)} className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+                    <div key={cat.categoryId} onClick={() => navigate(`/categories/${cat.categoryId}`)}
+                      className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
                       <CategoryIcon iconId={cat.categoryIcon} color={cat.categoryColor} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1.5">
@@ -305,10 +579,8 @@ export function Dashboard() {
                           </span>
                         </div>
                         <div className="h-1.5 bg-bg-elevated rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{ width: `${(cat.total / maxTotal) * 100}%`, backgroundColor: cat.categoryColor, opacity: 0.7 }}
-                          />
+                          <div className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${(cat.total / maxTotal) * 100}%`, backgroundColor: cat.categoryColor, opacity: 0.7 }} />
                         </div>
                       </div>
                     </div>
@@ -319,11 +591,11 @@ export function Dashboard() {
           </section>
         </div>
 
-        {/* Recent Transactions */}
         <div className="col-span-2">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-[13px] font-medium text-text-secondary">近期交易</h3>
-            <button onClick={() => navigate("/transactions")} className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
+            <button onClick={() => navigate("/transactions")}
+              className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
               全部 <ArrowRight className="w-3 h-3" />
             </button>
           </div>
@@ -332,7 +604,8 @@ export function Dashboard() {
               <p className="py-8 text-center text-[13px] text-text-muted">尚無交易紀錄</p>
             ) : (
               transactions.slice(0, 10).map((txn) => (
-                <div key={txn.id} onClick={() => navigate(`/transactions/${txn.id}`)} className="flex items-center justify-between py-3 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
+                <div key={txn.id} onClick={() => navigate(`/transactions/${txn.id}`)}
+                  className="flex items-center justify-between py-3 px-4 hover:bg-bg-card-hover transition-colors cursor-pointer">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <CategoryIcon iconId={txn.categoryIcon ?? "other-expense"} color="#7a756b" size="sm" />
                     <div className="min-w-0">
@@ -351,59 +624,95 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* ── Forecast Card ── */}
-      {monthlySurplus !== 0 && (
-        <div className="glass-card p-5 mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-[13px] font-medium text-text-secondary">資產預測</h3>
-              <p className="text-[11px] text-text-tertiary mt-0.5">
-                基於每月預計結餘 <span className={`font-medium amount-large ${monthlySurplus >= 0 ? "text-income" : "text-expense"}`}>
-                  {monthlySurplus >= 0 ? "+" : ""}{formatWithSymbol(monthlySurplus, reportingCurrency)}
-                </span>
-              </p>
+      {/* ── Target Form Modal ── */}
+      {showTargetForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowTargetForm(false)}>
+          <div className="glass-card p-6 w-[380px] space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-text-primary">新增目標</h3>
+              <button onClick={() => setShowTargetForm(false)}><X className="w-4 h-4 text-text-tertiary" /></button>
             </div>
-            <button onClick={() => navigate("/budgets")} className="text-[12px] text-accent-light hover:text-accent flex items-center gap-0.5 transition-colors">
-              調整預算 <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
 
-          <div className="grid grid-cols-5 gap-4 mb-5">
-            {forecastPoints.map((p) => (
-              <div key={p.label} className={`rounded-xl p-3 text-center ${p.label === "現在" ? "bg-bg-elevated" : "bg-bg-elevated/60"}`}>
-                <p className="text-[10px] text-text-tertiary uppercase tracking-wider mb-1">{p.label}</p>
-                <p className={`text-[13px] font-semibold amount-large ${p.value >= netWorth ? "text-income" : "text-expense"}`}>
-                  {formatWithSymbol(p.value, reportingCurrency)}
-                </p>
-              </div>
-            ))}
-          </div>
+            {/* Type */}
+            <div className="flex gap-2">
+              {(["floor", "milestone"] as const).map((v) => (
+                <button key={v} onClick={() => setTargetForm({ ...targetForm, type: v })}
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors ${targetForm.type === v ? "bg-accent text-white" : "bg-bg-elevated text-text-secondary hover:bg-bg-card-hover"}`}>
+                  {v === "floor" ? "底線（每月）" : "里程碑（指定月）"}
+                </button>
+              ))}
+            </div>
 
-          <ResponsiveContainer width="100%" height={100}>
-            <AreaChart data={forecastPoints} margin={{ top: 4, right: 4, left: 4, bottom: 0 }}>
-              <defs>
-                <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#7a756b" }} axisLine={false} tickLine={false} />
-              <Tooltip
-                formatter={(value: number) => formatWithSymbol(value, reportingCurrency)}
-                contentStyle={{ background: "#1e1c1a", border: "1px solid #3a3530", borderRadius: 8, fontSize: 12 }}
-                itemStyle={{ color: "#c8b8a8" }}
-              />
-              <Area
-                type="monotone"
-                dataKey="value"
-                name="預測資產"
-                stroke={monthlySurplus >= 0 ? "#6b9a6b" : "#c27258"}
-                strokeWidth={2}
-                fill="url(#forecastGrad)"
-                dot={{ fill: monthlySurplus >= 0 ? "#6b9a6b" : "#c27258", r: 3, strokeWidth: 0 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+            <input placeholder="名稱（如：簽證底線）" value={targetForm.name}
+              onChange={(e) => setTargetForm({ ...targetForm, name: e.target.value })}
+              className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
+
+            <div className="flex gap-2">
+              <input type="number" placeholder="金額" value={targetForm.amount}
+                onChange={(e) => setTargetForm({ ...targetForm, amount: e.target.value })}
+                className="flex-1 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
+              <input placeholder="幣別（如 TWD）" value={targetForm.currencyCode}
+                onChange={(e) => setTargetForm({ ...targetForm, currencyCode: e.target.value })}
+                className="w-24 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
+            </div>
+
+            {targetForm.type === "milestone" && (
+              <input type="month" value={targetForm.targetMonth}
+                onChange={(e) => setTargetForm({ ...targetForm, targetMonth: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary focus:outline-none focus:border-accent/50" />
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setShowTargetForm(false)}
+                className="flex-1 py-2.5 rounded-xl bg-bg-elevated text-[13px] text-text-secondary hover:bg-bg-card-hover transition-colors">
+                取消
+              </button>
+              <button onClick={handleAddTarget}
+                className="flex-1 py-2.5 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent-light transition-colors">
+                儲存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Event Form Modal ── */}
+      {showEventForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowEventForm(false)}>
+          <div className="glass-card p-6 w-[380px] space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-[15px] font-semibold text-text-primary">新增計畫事件</h3>
+              <button onClick={() => setShowEventForm(false)}><X className="w-4 h-4 text-text-tertiary" /></button>
+            </div>
+
+            <input placeholder="名稱（如：ILR 申請費）" value={eventForm.name}
+              onChange={(e) => setEventForm({ ...eventForm, name: e.target.value })}
+              className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
+
+            <div className="flex gap-2">
+              <input type="number" placeholder="金額（負數 = 支出）" value={eventForm.amount}
+                onChange={(e) => setEventForm({ ...eventForm, amount: e.target.value })}
+                className="flex-1 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
+              <input placeholder="幣別" value={eventForm.currencyCode}
+                onChange={(e) => setEventForm({ ...eventForm, currencyCode: e.target.value })}
+                className="w-24 px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/50" />
+            </div>
+
+            <input type="month" value={eventForm.month}
+              onChange={(e) => setEventForm({ ...eventForm, month: e.target.value })}
+              className="w-full px-3 py-2.5 rounded-xl bg-bg-input border border-border text-[13px] text-text-primary focus:outline-none focus:border-accent/50" />
+
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setShowEventForm(false)}
+                className="flex-1 py-2.5 rounded-xl bg-bg-elevated text-[13px] text-text-secondary hover:bg-bg-card-hover transition-colors">
+                取消
+              </button>
+              <button onClick={handleAddEvent}
+                className="flex-1 py-2.5 rounded-xl bg-accent text-white text-[13px] font-medium hover:bg-accent-light transition-colors">
+                儲存
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
