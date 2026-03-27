@@ -12,7 +12,7 @@ const EMPTY_EVENT = { name: "", amount: "", currencyCode: "", month: "" };
 
 export function Goals() {
   const { targets, events, addTarget, updateTarget, removeTarget, addEvent, removeEvent } = useTargetStore();
-  const { formatWithSymbol } = useCurrencyStore();
+  const { formatWithSymbol, toSmallestUnit, toDisplayAmount } = useCurrencyStore();
   const { reportingCurrency } = useSettingsStore();
   const { convert } = useExchangeRateStore();
 
@@ -37,7 +37,7 @@ export function Goals() {
     setTargetForm({
       name: t.name,
       type: t.type,
-      amount: String(t.amount),
+      amount: String(toDisplayAmount(t.amount, t.currencyCode)),
       currencyCode: t.currencyCode,
       targetMonth: t.targetMonth ?? "",
     });
@@ -49,7 +49,7 @@ export function Goals() {
     const data = {
       name: targetForm.name,
       type: targetForm.type,
-      amount: parseFloat(targetForm.amount),
+      amount: toSmallestUnit(parseFloat(targetForm.amount), targetForm.currencyCode.toUpperCase()),
       currencyCode: targetForm.currencyCode.toUpperCase(),
       targetMonth: targetForm.type === "milestone" ? targetForm.targetMonth || undefined : undefined,
     };
@@ -72,7 +72,7 @@ export function Goals() {
     if (!eventForm.name || !eventForm.amount || !eventForm.currencyCode || !eventForm.month) return;
     addEvent({
       name: eventForm.name,
-      amount: parseFloat(eventForm.amount),
+      amount: toSmallestUnit(parseFloat(eventForm.amount), eventForm.currencyCode.toUpperCase()),
       currencyCode: eventForm.currencyCode.toUpperCase(),
       month: eventForm.month,
     });
