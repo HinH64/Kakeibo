@@ -12,6 +12,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
+import { api } from "../lib/api";
 import { useCurrencyStore } from "../stores/currencyStore";
 import { useSettingsStore } from "../stores/settingsStore";
 

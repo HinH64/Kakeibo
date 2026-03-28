@@ -34,7 +34,7 @@ export const useCurrencyStore = create<CurrencyStore>((set, get) => ({
   fetchAll: async () => {
     set({ loading: true });
     const data = await api.currencies.listAll();
-    const map = new Map(data.map((c: any) => [c.code, c]));
+    const map = new Map<string, CurrencyInfo>(data.map((c: any) => [c.code, c]));
     set({ currencies: data, currencyMap: map, loading: false });
   },
 
@@ -42,7 +42,7 @@ export const useCurrencyStore = create<CurrencyStore>((set, get) => ({
     set({ loading: true });
     const data = await api.currencies.listActive();
     const all = get().currencies;
-    const map = all.length > 0 ? get().currencyMap : new Map(data.map((c: any) => [c.code, c]));
+    const map: Map<string, CurrencyInfo> = all.length > 0 ? get().currencyMap : new Map(data.map((c: any) => [c.code, c]));
     set({ activeCurrencies: data, currencyMap: map, loading: false });
   },
 

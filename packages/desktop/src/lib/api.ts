@@ -18,7 +18,7 @@ async function unwrap<T>(result: IpcResult<T>): Promise<T> {
 }
 
 // REST API helper
-async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
+async function fetchApi(url: string, options?: RequestInit): Promise<any> {
   const res = await fetch(url, {
     headers: { "Content-Type": "application/json" },
     ...options,

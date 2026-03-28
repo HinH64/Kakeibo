@@ -1,7 +1,7 @@
 // Mock API for browser preview (no Electron IPC available)
 // Uses in-memory arrays seeded with demo data
 
-import type { AccountWithBalance, TransactionWithDetails } from "../types/electron";
+import type { AccountWithBalance } from "@kakeibo/core";
 
 // ─── Currency data (subset of seed) ──────────────────────────────────────────
 
@@ -64,7 +64,7 @@ const today = new Date().toISOString().slice(0, 10);
 const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 const dayBefore = new Date(Date.now() - 172800000).toISOString().slice(0, 10);
 
-const transactionData: TransactionWithDetails[] = [
+const transactionData: any[] = [
   { id: "txn-1", type: "expense", amount: 385, date: today, accountId: "acc-1", categoryId: "cat-food", note: "午餐 — 鼎泰豐", toAccountId: null, toAmount: null, exchangeRate: null, createdAt: today, updatedAt: today, accountName: "台幣活存", accountCurrency: "TWD", categoryName: "餐飲", categoryIcon: "food", tagNames: [] },
   { id: "txn-2", type: "expense", amount: 100, date: today, accountId: "acc-1", categoryId: "cat-transport", note: "捷運儲值", toAccountId: null, toAmount: null, exchangeRate: null, createdAt: today, updatedAt: today, accountName: "台幣活存", accountCurrency: "TWD", categoryName: "交通", categoryIcon: "transport", tagNames: [] },
   { id: "txn-3", type: "expense", amount: 35, date: today, accountId: "acc-1", categoryId: "cat-food", note: "咖啡", toAccountId: null, toAmount: null, exchangeRate: null, createdAt: today, updatedAt: today, accountName: "台幣活存", accountCurrency: "TWD", categoryName: "餐飲", categoryIcon: "food", tagNames: [] },
