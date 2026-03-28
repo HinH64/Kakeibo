@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "packages/desktop/dist",
+  "buildCommand": "pnpm run build && cp -r packages/desktop/dist .",
+  "outputDirectory": "dist",
   "framework": null,
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }
