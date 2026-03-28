@@ -8,8 +8,8 @@ import {
   CurrencyModel,
   settings,
   budgets,
+  eq,
 } from "@kakeibo/core";
-import { eq } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
 const connectionString = process.env.DATABASE_URL;
