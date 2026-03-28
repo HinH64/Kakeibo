@@ -8,7 +8,7 @@ function registerIpcHandlers(ipcMain, models) {
   function handle(channel, fn) {
     ipcMain.handle(channel, async (_event, ...args) => {
       try {
-        const data = fn(...args);
+        const data = await fn(...args);
         return { success: true, data };
       } catch (err) {
         console.error(`[IPC ${channel}]`, err);
@@ -54,17 +54,18 @@ function registerIpcHandlers(ipcMain, models) {
   handle("currencies:convert", (amount, from, to) => currencyModel.convert(amount, from, to));
 
   // ─── Settings ──────────────────────────────────────────────────────────────
-  handle("settings:get", (key) => {
+  handle("settings:get", async (key) => {
     const { eq } = require("drizzle-orm");
-    return db.select().from(settingsTable).where(eq(settingsTable.key, key)).get();
+    const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, key));
+    return rows[0];
   });
-  handle("settings:set", (key, value) => {
+  handle("settings:set", async (key, value) => {
     const { eq } = require("drizzle-orm");
-    const existing = db.select().from(settingsTable).where(eq(settingsTable.key, key)).get();
-    if (existing) {
-      db.update(settingsTable).set({ value }).where(eq(settingsTable.key, key)).run();
+    const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, key));
+    if (rows[0]) {
+      await db.update(settingsTable).set({ value }).where(eq(settingsTable.key, key));
     } else {
-      db.insert(settingsTable).values({ key, value }).run();
+      await db.insert(settingsTable).values({ key, value });
     }
     return { key, value };
   });

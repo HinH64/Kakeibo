@@ -42,7 +42,7 @@ export const seedCurrencies: CurrencyInsert[] = [
 // ─── Default Categories ─────────────────────────────────────────────────────
 
 export const seedCategories: CategoryInsert[] = [
-  // Expense categories — icon field stores Lucide iconId (matches CategoryIcon's iconMap)
+  // Expense categories
   { id: "cat-food", name: "Food & Dining", nameZh: "餐飲", nameJa: "食費", icon: "food", color: "#c27258", type: "expense", sortOrder: 1 },
   { id: "cat-groceries", name: "Groceries", nameZh: "食材雜貨", nameJa: "食料品", icon: "groceries", color: "#c9944a", type: "expense", sortOrder: 2 },
   { id: "cat-transport", name: "Transportation", nameZh: "交通", nameJa: "交通費", icon: "transport", color: "#6588a8", type: "expense", sortOrder: 3 },
@@ -60,7 +60,6 @@ export const seedCategories: CategoryInsert[] = [
   { id: "cat-pets", name: "Pets", nameZh: "寵物", nameJa: "ペット", icon: "pets", color: "#b8a44e", type: "expense", sortOrder: 15 },
   { id: "cat-subscriptions", name: "Subscriptions", nameZh: "訂閱服務", nameJa: "サブスク", icon: "subscriptions", color: "#7a78a8", type: "expense", sortOrder: 16 },
   { id: "cat-other-expense", name: "Other Expense", nameZh: "其他支出", nameJa: "その他支出", icon: "other-expense", color: "#7a756b", type: "expense", sortOrder: 99 },
-
   // Income categories
   { id: "cat-salary", name: "Salary", nameZh: "薪資", nameJa: "給与", icon: "salary", color: "#6b9a6b", type: "income", sortOrder: 1 },
   { id: "cat-freelance", name: "Freelance", nameZh: "接案收入", nameJa: "フリーランス", icon: "freelance", color: "#5e9a9a", type: "income", sortOrder: 2 },
@@ -76,5 +75,5 @@ export const seedSettings = [
   { key: "reporting_currency", value: "TWD" },
   { key: "theme", value: "system" },
   { key: "locale", value: "zh-TW" },
-  { key: "first_day_of_week", value: "1" }, // Monday
+  { key: "first_day_of_week", value: "1" },
 ];

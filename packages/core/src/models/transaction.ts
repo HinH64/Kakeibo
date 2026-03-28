@@ -18,29 +18,28 @@ export interface TransactionFilter {
 export class TransactionModel {
   constructor(private db: KakeiboDB) {}
 
-  create(
+  async create(
     data: Omit<NewTransaction, "id" | "createdAt" | "updatedAt">,
-  ): Transaction {
+  ): Promise<Transaction> {
     this.validate(data);
     const id = uuid();
     const now = new Date().toISOString();
-    const result = this.db
+    const [result] = await this.db
       .insert(transactions)
       .values({ ...data, id, createdAt: now, updatedAt: now })
-      .returning()
-      .get();
+      .returning();
     return result;
   }
 
-  getById(id: string): Transaction | undefined {
-    return this.db
+  async getById(id: string): Promise<Transaction | undefined> {
+    const rows = await this.db
       .select()
       .from(transactions)
-      .where(eq(transactions.id, id))
-      .get();
+      .where(eq(transactions.id, id));
+    return rows[0];
   }
 
-  list(filter?: TransactionFilter): Transaction[] {
+  async list(filter?: TransactionFilter): Promise<Transaction[]> {
     const conditions = [];
 
     if (filter?.accountId) {
@@ -76,11 +75,11 @@ export class TransactionModel {
       query = query.offset(filter.offset);
     }
 
-    return query.all();
+    return query;
   }
 
-  listWithDetails(filter?: TransactionFilter): TransactionWithDetails[] {
-    const txns = this.list(filter);
+  async listWithDetails(filter?: TransactionFilter): Promise<TransactionWithDetails[]> {
+    const txns = await this.list(filter);
     if (txns.length === 0) return [];
 
     // Build lookup maps to avoid N+1
@@ -94,13 +93,15 @@ export class TransactionModel {
 
     const accountMap = new Map<string, { name: string; currencyCode: string }>();
     for (const id of accountIds) {
-      const acc = this.db.select().from(accounts).where(eq(accounts.id, id)).get();
+      const rows = await this.db.select().from(accounts).where(eq(accounts.id, id));
+      const acc = rows[0];
       if (acc) accountMap.set(id, { name: acc.name, currencyCode: acc.currencyCode });
     }
 
     const categoryMap = new Map<string, { name: string; icon: string | null; color: string | null }>();
     for (const id of categoryIds) {
-      const cat = this.db.select().from(categories).where(eq(categories.id, id)).get();
+      const rows = await this.db.select().from(categories).where(eq(categories.id, id));
+      const cat = rows[0];
       if (cat) categoryMap.set(id, { name: cat.name, icon: cat.icon, color: cat.color });
     }
 
@@ -121,38 +122,35 @@ export class TransactionModel {
     });
   }
 
-  getWithDetails(id: string): TransactionWithDetails | undefined {
-    const txn = this.getById(id);
+  async getWithDetails(id: string): Promise<TransactionWithDetails | undefined> {
+    const txn = await this.getById(id);
     if (!txn) return undefined;
 
-    const account = this.db
+    const accountRows = await this.db
       .select()
       .from(accounts)
-      .where(eq(accounts.id, txn.accountId))
-      .get();
+      .where(eq(accounts.id, txn.accountId));
+    const account = accountRows[0];
 
     const category = txn.categoryId
-      ? this.db
+      ? (await this.db
           .select()
           .from(categories)
-          .where(eq(categories.id, txn.categoryId))
-          .get()
+          .where(eq(categories.id, txn.categoryId)))[0]
       : undefined;
 
     const toAccount = txn.toAccountId
-      ? this.db
+      ? (await this.db
           .select()
           .from(accounts)
-          .where(eq(accounts.id, txn.toAccountId))
-          .get()
+          .where(eq(accounts.id, txn.toAccountId)))[0]
       : undefined;
 
-    const tagRows = this.db
+    const tagRows = await this.db
       .select({ name: tags.name })
       .from(transactionTags)
       .innerJoin(tags, eq(transactionTags.tagId, tags.id))
-      .where(eq(transactionTags.transactionId, id))
-      .all();
+      .where(eq(transactionTags.transactionId, id));
 
     return {
       ...txn,
@@ -166,27 +164,27 @@ export class TransactionModel {
     };
   }
 
-  update(
+  async update(
     id: string,
     data: Partial<Omit<NewTransaction, "id" | "createdAt" | "updatedAt">>,
-  ): Transaction | undefined {
+  ): Promise<Transaction | undefined> {
     const now = new Date().toISOString();
-    return this.db
+    const [result] = await this.db
       .update(transactions)
       .set({ ...data, updatedAt: now })
       .where(eq(transactions.id, id))
-      .returning()
-      .get();
+      .returning();
+    return result;
   }
 
-  delete(id: string): void {
-    this.db.delete(transactions).where(eq(transactions.id, id)).run();
+  async delete(id: string): Promise<void> {
+    await this.db.delete(transactions).where(eq(transactions.id, id));
   }
 
   /**
    * Get spending totals grouped by category for a date range.
    */
-  getSpendingByCategory(dateFrom: string, dateTo: string) {
+  async getSpendingByCategory(dateFrom: string, dateTo: string) {
     return this.db
       .select({
         categoryId: transactions.categoryId,
@@ -204,14 +202,13 @@ export class TransactionModel {
           lte(transactions.date, dateTo),
         ),
       )
-      .groupBy(transactions.categoryId)
-      .all();
+      .groupBy(transactions.categoryId, categories.name, categories.icon, categories.color);
   }
 
   /**
    * Get monthly income/expense totals for an account.
    */
-  getMonthlyTrend(accountId?: string, months: number = 6) {
+  async getMonthlyTrend(accountId?: string, months: number = 6) {
     const conditions = [
       sql`${transactions.type} IN ('income', 'expense')`,
     ];
@@ -228,8 +225,7 @@ export class TransactionModel {
       .from(transactions)
       .where(and(...conditions))
       .groupBy(sql`substr(${transactions.date}, 1, 7)`, transactions.type)
-      .orderBy(sql`substr(${transactions.date}, 1, 7)`)
-      .all();
+      .orderBy(sql`substr(${transactions.date}, 1, 7)`);
   }
 
   private validate(

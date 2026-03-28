@@ -1,6 +1,6 @@
 # Kakeibo — Multi-Currency Personal Finance
 
-A local-first personal finance app with true multi-currency account support. Each account is denominated in a specific currency (TWD, JPY, USD, EUR, etc.), with cross-currency transfers and net worth reporting in your chosen base currency.
+A personal finance app with true multi-currency account support. Each account is denominated in a specific currency (TWD, JPY, USD, EUR, etc.), with cross-currency transfers and net worth reporting in your chosen base currency.
 
 Built for people who hold money in multiple currencies — expats, frequent travellers, remote workers paid in foreign currencies.
 
@@ -23,11 +23,11 @@ Built for people who hold money in multiple currencies — expats, frequent trav
 | UI | React 19 + TypeScript |
 | Build | Vite |
 | Styling | Tailwind CSS v4 |
-| State | Zustand + TanStack Query |
-| Database | SQLite (better-sqlite3) |
+| State | Zustand |
+| Database | PostgreSQL (Neon) |
 | ORM | Drizzle ORM |
+| API Server | Hono |
 | Desktop | Electron |
-| Mobile | Capacitor (planned) |
 | Charts | Recharts |
 | i18n | i18next |
 
@@ -41,6 +41,9 @@ Kakeibo/
 │   │       ├── db/     # Drizzle schema, migrations, seed data
 │   │       ├── models/ # Account, Transaction, Category, Currency
 │   │       └── types/
+│   ├── server/         # Hono REST API server
+│   │   └── src/
+│   │       └── index.ts
 │   ├── ui/             # Shared React components, hooks, stores
 │   └── desktop/        # Electron + Vite + React shell
 │       ├── electron/   # Main process, preload
@@ -53,17 +56,60 @@ Kakeibo/
 
 ### Prerequisites
 
-- Node.js >= 18
+- Node.js >= 20
 - pnpm >= 9
 
-### Install & Run
+### Setup
+
+1. Clone the repo and install dependencies:
 
 ```bash
 pnpm install
-pnpm --filter desktop dev
 ```
 
-The dev server starts at `http://localhost:5173`.
+2. Create a `.env` file in the project root with your Neon PostgreSQL connection string:
+
+```
+DATABASE_URL=postgresql://user:pass@host/dbname?sslmode=require
+```
+
+3. Generate and push the database schema:
+
+```bash
+cd packages/core
+pnpm db:generate
+npx drizzle-kit push
+```
+
+4. Build the core package:
+
+```bash
+cd packages/core
+pnpm build
+```
+
+### Run (Development)
+
+Start the API server and frontend dev server:
+
+```bash
+# Terminal 1 — API server
+cd packages/server
+npx tsx src/index.ts
+
+# Terminal 2 — Frontend
+cd packages/desktop
+npx vite
+```
+
+The app is available at `http://localhost:5173`. The Vite dev server proxies `/api/*` to the Hono server on port 3001.
+
+### Run (Electron)
+
+```bash
+cd packages/desktop
+pnpm electron:dev
+```
 
 ## Data Model
 
@@ -71,7 +117,7 @@ All monetary amounts are stored as integers in the smallest currency unit (cents
 
 ## Design
 
-Warm dark theme inspired by Claude's UI — terracotta accent, earth-tone category palette, cream-toned text on warm dark backgrounds. Clean card-based layout with Lucide icons.
+Warm dark theme — terracotta accent, earth-tone category palette, cream-toned text on warm dark backgrounds. Clean card-based layout with Lucide icons.
 
 ## License
 

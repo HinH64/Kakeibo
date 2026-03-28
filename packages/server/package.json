@@ -1,0 +1,23 @@
+{
+  "name": "@kakeibo/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@kakeibo/core": "workspace:*",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.39.3",
+    "hono": "^4.7.0",
+    "@hono/node-server": "^1.14.0",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

@@ -7,51 +7,49 @@ import type { Account, NewAccount, AccountWithBalance } from "../types/index.js"
 export class AccountModel {
   constructor(private db: KakeiboDB) {}
 
-  create(data: Omit<NewAccount, "id" | "createdAt" | "updatedAt">): Account {
+  async create(data: Omit<NewAccount, "id" | "createdAt" | "updatedAt">): Promise<Account> {
     const id = uuid();
     const now = new Date().toISOString();
-    const result = this.db
+    const [result] = await this.db
       .insert(accounts)
       .values({ ...data, id, createdAt: now, updatedAt: now })
-      .returning()
-      .get();
+      .returning();
     return result;
   }
 
-  getById(id: string): Account | undefined {
-    return this.db.select().from(accounts).where(eq(accounts.id, id)).get();
+  async getById(id: string): Promise<Account | undefined> {
+    const rows = await this.db.select().from(accounts).where(eq(accounts.id, id));
+    return rows[0];
   }
 
-  list(options?: { includeArchived?: boolean }): Account[] {
+  async list(options?: { includeArchived?: boolean }): Promise<Account[]> {
     if (options?.includeArchived) {
       return this.db
         .select()
         .from(accounts)
-        .orderBy(accounts.sortOrder)
-        .all();
+        .orderBy(accounts.sortOrder);
     }
     return this.db
       .select()
       .from(accounts)
       .where(eq(accounts.isArchived, false))
-      .orderBy(accounts.sortOrder)
-      .all();
+      .orderBy(accounts.sortOrder);
   }
 
-  update(
+  async update(
     id: string,
     data: Partial<Omit<NewAccount, "id" | "createdAt" | "updatedAt">>,
-  ): Account | undefined {
+  ): Promise<Account | undefined> {
     const now = new Date().toISOString();
-    return this.db
+    const [result] = await this.db
       .update(accounts)
       .set({ ...data, updatedAt: now })
       .where(eq(accounts.id, id))
-      .returning()
-      .get();
+      .returning();
+    return result;
   }
 
-  archive(id: string): Account | undefined {
+  async archive(id: string): Promise<Account | undefined> {
     return this.update(id, { isArchived: true });
   }
 
@@ -63,12 +61,12 @@ export class AccountModel {
    *   + SUM(transfers IN to this account)
    *   - SUM(transfers OUT from this account)
    */
-  getBalance(accountId: string): number {
-    const account = this.getById(accountId);
+  async getBalance(accountId: string): Promise<number> {
+    const account = await this.getById(accountId);
     if (!account) return 0;
 
     // Income to this account
-    const incomeResult = this.db
+    const [incomeResult] = await this.db
       .select({ total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)` })
       .from(transactions)
       .where(
@@ -76,11 +74,10 @@ export class AccountModel {
           eq(transactions.accountId, accountId),
           eq(transactions.type, "income"),
         ),
-      )
-      .get();
+      );
 
     // Expenses from this account
-    const expenseResult = this.db
+    const [expenseResult] = await this.db
       .select({ total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)` })
       .from(transactions)
       .where(
@@ -88,11 +85,10 @@ export class AccountModel {
           eq(transactions.accountId, accountId),
           eq(transactions.type, "expense"),
         ),
-      )
-      .get();
+      );
 
     // Transfers OUT from this account
-    const transferOutResult = this.db
+    const [transferOutResult] = await this.db
       .select({ total: sql<number>`COALESCE(SUM(${transactions.amount}), 0)` })
       .from(transactions)
       .where(
@@ -100,11 +96,10 @@ export class AccountModel {
           eq(transactions.accountId, accountId),
           eq(transactions.type, "transfer"),
         ),
-      )
-      .get();
+      );
 
     // Transfers IN to this account (use toAmount for cross-currency)
-    const transferInResult = this.db
+    const [transferInResult] = await this.db
       .select({
         total: sql<number>`COALESCE(SUM(${transactions.toAmount}), 0)`,
       })
@@ -114,8 +109,7 @@ export class AccountModel {
           eq(transactions.toAccountId, accountId),
           eq(transactions.type, "transfer"),
         ),
-      )
-      .get();
+      );
 
     return (
       account.initialBalance +
@@ -126,19 +120,20 @@ export class AccountModel {
     );
   }
 
-  getWithBalance(accountId: string): AccountWithBalance | undefined {
-    const account = this.getById(accountId);
+  async getWithBalance(accountId: string): Promise<AccountWithBalance | undefined> {
+    const account = await this.getById(accountId);
     if (!account) return undefined;
-    return { ...account, balance: this.getBalance(accountId) };
+    return { ...account, balance: await this.getBalance(accountId) };
   }
 
-  listWithBalances(options?: {
+  async listWithBalances(options?: {
     includeArchived?: boolean;
-  }): AccountWithBalance[] {
-    const accountsList = this.list(options);
-    return accountsList.map((account) => ({
-      ...account,
-      balance: this.getBalance(account.id),
-    }));
+  }): Promise<AccountWithBalance[]> {
+    const accountsList = await this.list(options);
+    const results: AccountWithBalance[] = [];
+    for (const account of accountsList) {
+      results.push({ ...account, balance: await this.getBalance(account.id) });
+    }
+    return results;
   }
 }

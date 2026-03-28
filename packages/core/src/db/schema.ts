@@ -1,20 +1,20 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { pgTable, text, integer, doublePrecision, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 
 // ─── Currencies ──────────────────────────────────────────────────────────────
 
-export const currencies = sqliteTable("currencies", {
+export const currencies = pgTable("currencies", {
   code: text("code").primaryKey(), // ISO 4217: "USD", "JPY", "TWD"
   symbol: text("symbol").notNull(), // "$", "¥", "NT$"
   name: text("name").notNull(), // "US Dollar"
   nameZh: text("name_zh"), // "美元"
   nameJa: text("name_ja"), // "米ドル"
   decimalPlaces: integer("decimal_places").notNull().default(2), // JPY=0, most=2
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
 });
 
 // ─── Accounts ────────────────────────────────────────────────────────────────
 
-export const accounts = sqliteTable("accounts", {
+export const accounts = pgTable("accounts", {
   id: text("id").primaryKey(), // UUID
   name: text("name").notNull(),
   type: text("type", {
@@ -29,7 +29,7 @@ export const accounts = sqliteTable("accounts", {
   icon: text("icon"), // emoji or icon identifier
   color: text("color"), // hex color
   sortOrder: integer("sort_order").notNull().default(0),
-  isArchived: integer("is_archived", { mode: "boolean" }).notNull().default(false),
+  isArchived: boolean("is_archived").notNull().default(false),
   initialBalance: integer("initial_balance").notNull().default(0), // smallest currency unit
   createdAt: text("created_at")
     .notNull()
@@ -41,7 +41,7 @@ export const accounts = sqliteTable("accounts", {
 
 // ─── Categories ──────────────────────────────────────────────────────────────
 
-export const categories = sqliteTable("categories", {
+export const categories = pgTable("categories", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   nameZh: text("name_zh"),
@@ -51,12 +51,12 @@ export const categories = sqliteTable("categories", {
   type: text("type", { enum: ["income", "expense"] }).notNull(),
   parentId: text("parent_id").references((): any => categories.id),
   sortOrder: integer("sort_order").notNull().default(0),
-  isArchived: integer("is_archived", { mode: "boolean" }).notNull().default(false),
+  isArchived: boolean("is_archived").notNull().default(false),
 });
 
 // ─── Transactions ────────────────────────────────────────────────────────────
 
-export const transactions = sqliteTable("transactions", {
+export const transactions = pgTable("transactions", {
   id: text("id").primaryKey(),
   date: text("date").notNull(), // ISO date: "2026-03-26"
   type: text("type", { enum: ["expense", "income", "transfer"] }).notNull(),
@@ -69,12 +69,12 @@ export const transactions = sqliteTable("transactions", {
   // For transfers between accounts
   toAccountId: text("to_account_id").references(() => accounts.id),
   toAmount: integer("to_amount"), // amount received (may differ for cross-currency)
-  exchangeRate: real("exchange_rate"), // 1 unit of source = X units of target
+  exchangeRate: doublePrecision("exchange_rate"), // 1 unit of source = X units of target
   // Metadata
-  isRecurring: integer("is_recurring", { mode: "boolean" }).notNull().default(false),
+  isRecurring: boolean("is_recurring").notNull().default(false),
   recurringId: text("recurring_id"),
-  locationLat: real("location_lat"),
-  locationLon: real("location_lon"),
+  locationLat: doublePrecision("location_lat"),
+  locationLon: doublePrecision("location_lon"),
   photoPath: text("photo_path"),
   createdAt: text("created_at")
     .notNull()
@@ -86,12 +86,12 @@ export const transactions = sqliteTable("transactions", {
 
 // ─── Tags ────────────────────────────────────────────────────────────────────
 
-export const tags = sqliteTable("tags", {
+export const tags = pgTable("tags", {
   id: text("id").primaryKey(),
   name: text("name").notNull().unique(),
 });
 
-export const transactionTags = sqliteTable(
+export const transactionTags = pgTable(
   "transaction_tags",
   {
     transactionId: text("transaction_id")
@@ -105,7 +105,7 @@ export const transactionTags = sqliteTable(
 
 // ─── Exchange Rates ──────────────────────────────────────────────────────────
 
-export const exchangeRates = sqliteTable(
+export const exchangeRates = pgTable(
   "exchange_rates",
   {
     id: text("id").primaryKey(),
@@ -116,7 +116,7 @@ export const exchangeRates = sqliteTable(
     toCurrency: text("to_currency")
       .notNull()
       .references(() => currencies.code),
-    rate: real("rate").notNull(),
+    rate: doublePrecision("rate").notNull(),
     source: text("source").default("manual"), // "manual", "ecb"
   },
   (table) => [
@@ -130,7 +130,7 @@ export const exchangeRates = sqliteTable(
 
 // ─── Budgets ─────────────────────────────────────────────────────────────────
 
-export const budgets = sqliteTable("budgets", {
+export const budgets = pgTable("budgets", {
   id: text("id").primaryKey(),
   categoryId: text("category_id").references(() => categories.id), // NULL = total budget
   currencyCode: text("currency_code")
@@ -139,12 +139,12 @@ export const budgets = sqliteTable("budgets", {
   amount: integer("amount").notNull(), // budget limit in smallest unit
   period: text("period", { enum: ["monthly", "weekly", "yearly"] }).notNull(),
   startDate: text("start_date").notNull(),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
 });
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
-export const settings = sqliteTable("settings", {
+export const settings = pgTable("settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
 });

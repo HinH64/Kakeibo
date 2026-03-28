@@ -8,16 +8,29 @@ async function initDatabase() {
   // Dynamic import for ESM core package
   const core = await import("@kakeibo/core");
 
-  const dbPath = path.join(app.getPath("userData"), "kakeibo.db");
-  console.log("[DB] Path:", dbPath);
+  // Load .env from project root
+  const envPath = path.join(__dirname, "../../../.env");
+  try {
+    const dotenv = await import("dotenv");
+    dotenv.config({ path: envPath });
+  } catch {
+    // dotenv may not be available; DATABASE_URL might be set via environment
+  }
+
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error("DATABASE_URL environment variable is not set. Check your .env file.");
+  }
+  console.log("[DB] Connecting to PostgreSQL...");
 
   // Resolve migrations folder relative to core package
   const coreDir = path.dirname(require.resolve("@kakeibo/core/package.json"));
   const migrationsFolder = path.join(coreDir, "drizzle");
 
   // Run migrations and seed
-  const db = core.runMigrations(dbPath, migrationsFolder);
-  core.seedDatabase(db);
+  await core.runMigrations(connectionString, migrationsFolder);
+  const db = core.createDatabase(connectionString);
+  await core.seedDatabase(db);
   console.log("[DB] Initialized and seeded");
 
   // Create model instances

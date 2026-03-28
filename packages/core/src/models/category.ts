@@ -7,27 +7,27 @@ import type { Category, NewCategory } from "../types/index.js";
 export class CategoryModel {
   constructor(private db: KakeiboDB) {}
 
-  create(data: Omit<NewCategory, "id">): Category {
+  async create(data: Omit<NewCategory, "id">): Promise<Category> {
     const id = uuid();
-    return this.db
+    const [result] = await this.db
       .insert(categories)
       .values({ ...data, id })
-      .returning()
-      .get();
+      .returning();
+    return result;
   }
 
-  getById(id: string): Category | undefined {
-    return this.db
+  async getById(id: string): Promise<Category | undefined> {
+    const rows = await this.db
       .select()
       .from(categories)
-      .where(eq(categories.id, id))
-      .get();
+      .where(eq(categories.id, id));
+    return rows[0];
   }
 
-  list(options?: {
+  async list(options?: {
     type?: "income" | "expense";
     includeArchived?: boolean;
-  }): Category[] {
+  }): Promise<Category[]> {
     const conditions = [];
 
     if (options?.type) {
@@ -41,17 +41,16 @@ export class CategoryModel {
       .select()
       .from(categories)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(categories.sortOrder)
-      .all();
+      .orderBy(categories.sortOrder);
   }
 
   /**
    * Returns categories as a tree: top-level categories with children nested.
    */
-  listAsTree(options?: {
+  async listAsTree(options?: {
     type?: "income" | "expense";
-  }): (Category & { children: Category[] })[] {
-    const all = this.list(options);
+  }): Promise<(Category & { children: Category[] })[]> {
+    const all = await this.list(options);
     const topLevel = all.filter((c) => !c.parentId);
     return topLevel.map((parent) => ({
       ...parent,
@@ -59,19 +58,19 @@ export class CategoryModel {
     }));
   }
 
-  update(
+  async update(
     id: string,
     data: Partial<Omit<NewCategory, "id">>,
-  ): Category | undefined {
-    return this.db
+  ): Promise<Category | undefined> {
+    const [result] = await this.db
       .update(categories)
       .set(data)
       .where(eq(categories.id, id))
-      .returning()
-      .get();
+      .returning();
+    return result;
   }
 
-  archive(id: string): Category | undefined {
+  async archive(id: string): Promise<Category | undefined> {
     return this.update(id, { isArchived: true });
   }
 }

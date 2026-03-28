@@ -1,45 +1,40 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import postgres from "postgres";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import * as schema from "./schema.js";
 import { seedCurrencies, seedCategories, seedSettings } from "./seed.js";
 import { currencies, categories, settings } from "./schema.js";
 
-export function runMigrations(dbPath: string, migrationsFolder = "./drizzle") {
-  const sqlite = new Database(dbPath);
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("foreign_keys = ON");
-
-  const db = drizzle(sqlite, { schema });
+export async function runMigrations(connectionString: string, migrationsFolder = "./drizzle") {
+  const client = postgres(connectionString, { max: 1 });
+  const db = drizzle(client, { schema });
 
   // Run schema migrations
-  migrate(db, { migrationsFolder });
+  await migrate(db, { migrationsFolder });
 
+  await client.end();
   return db;
 }
 
-export function seedDatabase(db: ReturnType<typeof drizzle>) {
+export async function seedDatabase(db: ReturnType<typeof drizzle>) {
   // Seed currencies
   for (const currency of seedCurrencies) {
-    db.insert(currencies)
+    await db.insert(currencies)
       .values(currency)
-      .onConflictDoNothing()
-      .run();
+      .onConflictDoNothing();
   }
 
   // Seed categories
   for (const category of seedCategories) {
-    db.insert(categories)
+    await db.insert(categories)
       .values(category)
-      .onConflictDoNothing()
-      .run();
+      .onConflictDoNothing();
   }
 
   // Seed settings
   for (const setting of seedSettings) {
-    db.insert(settings)
+    await db.insert(settings)
       .values(setting)
-      .onConflictDoNothing()
-      .run();
+      .onConflictDoNothing();
   }
 }
