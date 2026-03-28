@@ -6,7 +6,26 @@ settings:
 
 importers:
 
-  .: {}
+  .:
+    devDependencies:
+      '@kakeibo/core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@kakeibo/server':
+        specifier: workspace:*
+        version: link:packages/server
+      drizzle-orm:
+        specifier: ^0.39.3
+        version: 0.39.3(postgres@3.4.8)
+      hono:
+        specifier: ^4.7.0
+        version: 4.12.9
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.8
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
 
   packages/core:
     dependencies:

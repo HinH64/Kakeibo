@@ -15,5 +15,13 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "hono": "^4.7.0",
+    "@kakeibo/core": "workspace:*",
+    "@kakeibo/server": "workspace:*",
+    "drizzle-orm": "^0.39.3",
+    "postgres": "^3.4.5",
+    "uuid": "^11.1.0"
   }
 }
