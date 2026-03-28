@@ -69,6 +69,7 @@ export function Accounts() {
         onClose={() => setShowCreate(false)}
         currencies={activeCurrencies}
         onCreate={create}
+        defaultCurrency={reportingCurrency}
       />
     </div>
   );
@@ -122,14 +123,15 @@ function Section({ label, total, totalColor, accounts, formatBalance, reportingC
   );
 }
 
-function CreateAccountModal({ isOpen, onClose, currencies, onCreate }: {
+function CreateAccountModal({ isOpen, onClose, currencies, onCreate, defaultCurrency }: {
   isOpen: boolean;
   onClose: () => void;
   currencies: any[];
   onCreate: (data: any) => Promise<any>;
+  defaultCurrency: string;
 }) {
   const [name, setName] = useState("");
-  const [currencyCode, setCurrencyCode] = useState("TWD");
+  const [currencyCode, setCurrencyCode] = useState(defaultCurrency);
   const [type, setType] = useState<"asset" | "liability">("asset");
   const [saving, setSaving] = useState(false);
 

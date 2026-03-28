@@ -8,6 +8,7 @@ import { useCurrencyStore } from "../stores/currencyStore";
 import { useCategoryStore } from "../stores/categoryStore";
 import { useTransactionStore } from "../stores/transactionStore";
 import { useModalStore } from "../stores/modalStore";
+import { useSettingsStore } from "../stores/settingsStore";
 import { ArrowRight } from "lucide-react";
 
 interface TransactionFormProps {
@@ -46,8 +47,9 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const toAccount = accounts.find((a) => a.id === toAccountId);
-  const currencyCode = selectedAccount?.currencyCode ?? "TWD";
-  const toCurrencyCode = toAccount?.currencyCode ?? "TWD";
+  const { reportingCurrency } = useSettingsStore();
+  const currencyCode = selectedAccount?.currencyCode ?? reportingCurrency;
+  const toCurrencyCode = toAccount?.currencyCode ?? reportingCurrency;
   const isCrossCurrency = type === "transfer" && currencyCode !== toCurrencyCode;
 
   // Load edit data
