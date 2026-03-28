@@ -12,7 +12,7 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
   },
   build: {
-    outDir: "dist",
+    outDir: process.env.VERCEL ? "../../dist" : "dist",
     emptyOutDir: true,
   },
   server: {
