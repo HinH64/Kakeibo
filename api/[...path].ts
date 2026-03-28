@@ -3,19 +3,29 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { default: app } = await import("../packages/server/src/app.js");
 
-  // Build a full URL from the Vercel request
-  const url = new URL(req.url || "/", `https://${req.headers.host}`);
+  // Ensure URL includes /api prefix for Hono's basePath matching
+  let path = req.url || "/";
+  if (!path.startsWith("/api")) {
+    path = `/api${path}`;
+  }
+
+  const url = new URL(path, `https://${req.headers.host}`);
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
     if (value) headers.set(key, Array.isArray(value) ? value.join(", ") : value);
   }
 
-  const request = new Request(url.toString(), {
+  const init: RequestInit = {
     method: req.method,
     headers,
-    body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
-  });
+  };
 
+  // Include body for non-GET/HEAD requests
+  if (req.method !== "GET" && req.method !== "HEAD" && req.body) {
+    init.body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+  }
+
+  const request = new Request(url.toString(), init);
   const response = await app.fetch(request);
 
   // Send response back through Vercel's res
