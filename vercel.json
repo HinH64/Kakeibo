@@ -1,6 +1,6 @@
 {
-  "buildCommand": "pnpm turbo build && cp -r packages/desktop/dist ./dist",
-  "outputDirectory": "dist",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "packages/desktop/dist",
   "framework": null,
   "rewrites": [
     { "source": "/((?!api/).*)", "destination": "/index.html" }

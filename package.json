@@ -17,6 +17,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "turbo": "^2.4.0",
     "hono": "^4.7.0",
     "@kakeibo/core": "workspace:*",
     "@kakeibo/server": "workspace:*",
