@@ -1,14 +1,95 @@
-import type {
-  Account,
-  AccountWithBalance,
-  Category,
-  Currency,
-  Transaction,
-  TransactionWithDetails,
-  ExchangeRate,
-  Setting,
-  TransactionFilter,
-} from "@kakeibo/core";
+// Inline types to avoid cross-package dependency issues on Vercel
+export interface Account {
+  id: string;
+  name: string;
+  type: string;
+  subtype: string | null;
+  currencyCode: string;
+  icon: string | null;
+  color: string | null;
+  initialBalance: number;
+  isArchived: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountWithBalance extends Account {
+  balance: number;
+  balanceInReportingCurrency?: number;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  nameZh: string | null;
+  nameJa: string | null;
+  type: string;
+  icon: string;
+  color: string;
+  parentId: string | null;
+  isArchived: boolean;
+  sortOrder: number;
+}
+
+export interface Currency {
+  code: string;
+  symbol: string;
+  name: string;
+  nameZh: string | null;
+  nameJa: string | null;
+  decimalPlaces: number;
+  isActive: boolean;
+}
+
+export interface Transaction {
+  id: string;
+  accountId: string;
+  type: string;
+  amount: number;
+  categoryId: string | null;
+  toAccountId: string | null;
+  toAmount: number | null;
+  exchangeRate: number | null;
+  date: string;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TransactionWithDetails extends Transaction {
+  accountName: string;
+  accountCurrency: string;
+  categoryName?: string;
+  categoryIcon?: string;
+  toAccountName?: string;
+  toAccountCurrency?: string;
+  tagNames: string[];
+}
+
+export interface ExchangeRate {
+  id: string;
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  date: string;
+}
+
+export interface Setting {
+  key: string;
+  value: string;
+}
+
+export interface TransactionFilter {
+  accountId?: string;
+  categoryId?: string;
+  type?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
 
 export interface IpcResult<T> {
   success: boolean;

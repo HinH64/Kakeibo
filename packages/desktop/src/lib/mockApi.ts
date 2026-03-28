@@ -1,7 +1,7 @@
 // Mock API for browser preview (no Electron IPC available)
 // Uses in-memory arrays seeded with demo data
 
-import type { AccountWithBalance } from "@kakeibo/core";
+import type { AccountWithBalance } from "../types/electron";
 
 // ─── Currency data (subset of seed) ──────────────────────────────────────────
 
