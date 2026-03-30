@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { api } from "../lib/api";
 
 export interface FinancialTarget {
   id: string;
@@ -7,7 +7,7 @@ export interface FinancialTarget {
   type: "floor" | "milestone";
   amount: number;
   currencyCode: string;
-  targetMonth?: string; // YYYY-MM, only for milestone
+  targetMonth?: string | null; // YYYY-MM, only for milestone
 }
 
 export interface PlannedEvent {
@@ -21,34 +21,53 @@ export interface PlannedEvent {
 interface TargetStore {
   targets: FinancialTarget[];
   events: PlannedEvent[];
-  addTarget: (t: Omit<FinancialTarget, "id">) => void;
-  updateTarget: (id: string, data: Partial<FinancialTarget>) => void;
-  removeTarget: (id: string) => void;
-  addEvent: (e: Omit<PlannedEvent, "id">) => void;
-  removeEvent: (id: string) => void;
+  loading: boolean;
+  fetchTargets: () => Promise<void>;
+  fetchEvents: () => Promise<void>;
+  addTarget: (t: Omit<FinancialTarget, "id">) => Promise<void>;
+  updateTarget: (id: string, data: Partial<FinancialTarget>) => Promise<void>;
+  removeTarget: (id: string) => Promise<void>;
+  addEvent: (e: Omit<PlannedEvent, "id">) => Promise<void>;
+  removeEvent: (id: string) => Promise<void>;
 }
 
-export const useTargetStore = create<TargetStore>()(
-  persist(
-    (set, get) => ({
-      targets: [],
-      events: [],
+export const useTargetStore = create<TargetStore>((set, get) => ({
+  targets: [],
+  events: [],
+  loading: false,
 
-      addTarget: (t) =>
-        set({ targets: [...get().targets, { ...t, id: `tgt-${Date.now()}` }] }),
+  fetchTargets: async () => {
+    const data = await api.targets.list();
+    set({ targets: data as FinancialTarget[] });
+  },
 
-      updateTarget: (id, data) =>
-        set({ targets: get().targets.map((t) => (t.id === id ? { ...t, ...data } : t)) }),
+  fetchEvents: async () => {
+    const data = await api.plannedEvents.list();
+    set({ events: data as PlannedEvent[] });
+  },
 
-      removeTarget: (id) =>
-        set({ targets: get().targets.filter((t) => t.id !== id) }),
+  addTarget: async (t) => {
+    await api.targets.create(t);
+    await get().fetchTargets();
+  },
 
-      addEvent: (e) =>
-        set({ events: [...get().events, { ...e, id: `evt-${Date.now()}` }] }),
+  updateTarget: async (id, data) => {
+    await api.targets.update(id, data);
+    await get().fetchTargets();
+  },
 
-      removeEvent: (id) =>
-        set({ events: get().events.filter((e) => e.id !== id) }),
-    }),
-    { name: "kakeibo-targets" }
-  )
-);
+  removeTarget: async (id) => {
+    await api.targets.delete(id);
+    await get().fetchTargets();
+  },
+
+  addEvent: async (e) => {
+    await api.plannedEvents.create(e);
+    await get().fetchEvents();
+  },
+
+  removeEvent: async (id) => {
+    await api.plannedEvents.delete(id);
+    await get().fetchEvents();
+  },
+}));

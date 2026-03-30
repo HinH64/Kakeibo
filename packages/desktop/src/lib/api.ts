@@ -167,6 +167,33 @@ export const api = {
     },
   },
 
+  targets: {
+    list: async () => {
+      return fetchApi("/api/targets");
+    },
+    create: async (data: any) => {
+      return fetchApi("/api/targets", { method: "POST", body: JSON.stringify(data) });
+    },
+    update: async (id: string, data: any) => {
+      return fetchApi(`/api/targets/${id}`, { method: "PUT", body: JSON.stringify(data) });
+    },
+    delete: async (id: string) => {
+      return fetchApi(`/api/targets/${id}`, { method: "DELETE" });
+    },
+  },
+
+  plannedEvents: {
+    list: async () => {
+      return fetchApi("/api/planned-events");
+    },
+    create: async (data: any) => {
+      return fetchApi("/api/planned-events", { method: "POST", body: JSON.stringify(data) });
+    },
+    delete: async (id: string) => {
+      return fetchApi(`/api/planned-events/${id}`, { method: "DELETE" });
+    },
+  },
+
   settings: {
     get: async (key: string) => {
       if (isElectron()) return unwrap(await window.electronAPI!.settings.get(key));

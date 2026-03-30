@@ -24,7 +24,7 @@ export function Dashboard() {
   const { reportingCurrency } = useSettingsStore();
   const { convert } = useExchangeRateStore();
   const { budgets, fetch: fetchBudgets } = useBudgetStore();
-  const { targets, events } = useTargetStore();
+  const { targets, events, fetchTargets, fetchEvents } = useTargetStore();
 
   const [allCategories, setAllCategories] = useState<{ id: string; type: string }[]>([]);
   const [monthIncome, setMonthIncome] = useState(0);
@@ -42,14 +42,23 @@ export function Dashboard() {
     const monthEnd = now.toISOString().slice(0, 10);
 
     fetchSpending(monthStart, monthEnd);
-    api.transactions.monthStats(monthStart, monthEnd).then(({ income, expense }) => {
-      setMonthIncome(income);
-      setMonthExpense(expense);
+    // Fetch all month transactions with details so we can convert each to reporting currency
+    api.transactions.listWithDetails({ dateFrom: monthStart, dateTo: monthEnd }).then((txns: any[]) => {
+      let inc = 0, exp = 0;
+      for (const t of txns) {
+        const converted = convert(t.amount, t.accountCurrency, reportingCurrency);
+        if (t.type === "income") inc += converted;
+        else if (t.type === "expense") exp += converted;
+      }
+      setMonthIncome(inc);
+      setMonthExpense(exp);
     });
     api.transactions.monthlyTrend(undefined, 6).then((trend) => {
       setMonthlyTrend(trend as { month: string; income: number; expense: number }[]);
     });
     fetchBudgets();
+    fetchTargets();
+    fetchEvents();
     Promise.all([
       api.categories.list({ type: "income" }),
       api.categories.list({ type: "expense" }),

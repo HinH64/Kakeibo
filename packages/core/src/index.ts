@@ -13,4 +13,4 @@ export { CurrencyModel } from "./models/currency.js";
 export type * from "./types/index.js";
 
 // Re-export drizzle utilities so consumers use the same instance
-export { eq, and, or, desc, asc, sql, between, like, inArray } from "drizzle-orm";
+export { eq, and, or, desc, asc, sql, between, like, inArray, isNull } from "drizzle-orm";

@@ -142,6 +142,37 @@ export const budgets = pgTable("budgets", {
   isActive: boolean("is_active").notNull().default(true),
 });
 
+// ─── Financial Targets ──────────────────────────────────────────────────────
+
+export const financialTargets = pgTable("financial_targets", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type", { enum: ["floor", "milestone"] }).notNull(),
+  amount: integer("amount").notNull(), // smallest currency unit
+  currencyCode: text("currency_code")
+    .notNull()
+    .references(() => currencies.code),
+  targetMonth: text("target_month"), // YYYY-MM, only for milestone
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
+// ─── Planned Events ─────────────────────────────────────────────────────────
+
+export const plannedEvents = pgTable("planned_events", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  amount: integer("amount").notNull(), // positive = income, negative = expense
+  currencyCode: text("currency_code")
+    .notNull()
+    .references(() => currencies.code),
+  month: text("month").notNull(), // YYYY-MM
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});
+
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 export const settings = pgTable("settings", {

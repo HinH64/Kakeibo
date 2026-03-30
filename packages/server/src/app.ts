@@ -8,6 +8,8 @@ import {
   CurrencyModel,
   settings,
   budgets,
+  financialTargets,
+  plannedEvents,
   eq,
 } from "@kakeibo/core";
 import { v4 as uuid } from "uuid";
@@ -267,6 +269,50 @@ app.put("/settings/:key", async (c) => {
     await db.insert(settings).values({ key, value });
   }
   return c.json({ key, value });
+});
+
+// ─── Financial Targets ────────────────────────────────────────────────────
+
+app.get("/targets", async (c) => {
+  const data = await db.select().from(financialTargets);
+  return c.json(data);
+});
+
+app.post("/targets", async (c) => {
+  const body = await c.req.json();
+  const id = uuid();
+  const [result] = await db.insert(financialTargets).values({ ...body, id }).returning();
+  return c.json(result);
+});
+
+app.put("/targets/:id", async (c) => {
+  const body = await c.req.json();
+  const [result] = await db.update(financialTargets).set(body).where(eq(financialTargets.id, c.req.param("id"))).returning();
+  return c.json(result);
+});
+
+app.delete("/targets/:id", async (c) => {
+  await db.delete(financialTargets).where(eq(financialTargets.id, c.req.param("id")));
+  return c.json({ ok: true });
+});
+
+// ─── Planned Events ──────────────────────────────────────────────────────
+
+app.get("/planned-events", async (c) => {
+  const data = await db.select().from(plannedEvents);
+  return c.json(data);
+});
+
+app.post("/planned-events", async (c) => {
+  const body = await c.req.json();
+  const id = uuid();
+  const [result] = await db.insert(plannedEvents).values({ ...body, id }).returning();
+  return c.json(result);
+});
+
+app.delete("/planned-events/:id", async (c) => {
+  await db.delete(plannedEvents).where(eq(plannedEvents.id, c.req.param("id")));
+  return c.json({ ok: true });
 });
 
 export default app;

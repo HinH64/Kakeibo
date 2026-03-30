@@ -11,12 +11,12 @@ const EMPTY_TARGET: { name: string; type: "floor" | "milestone"; amount: string;
 const EMPTY_EVENT = { name: "", amount: "", currencyCode: "", month: "" };
 
 export function Goals() {
-  const { targets, events, addTarget, updateTarget, removeTarget, addEvent, removeEvent } = useTargetStore();
+  const { targets, events, fetchTargets, fetchEvents, addTarget, updateTarget, removeTarget, addEvent, removeEvent } = useTargetStore();
   const { getCurrency, formatWithSymbol, fetchAll: fetchCurrencies } = useCurrencyStore();
   const { reportingCurrency } = useSettingsStore();
   const { convert } = useExchangeRateStore();
 
-  useEffect(() => { fetchCurrencies(); }, []);
+  useEffect(() => { fetchCurrencies(); fetchTargets(); fetchEvents(); }, []);
 
   // Convert display amount to smallest units for storage
   const toSmallestUnit = (display: number, code: string) => {

@@ -44,6 +44,7 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const selectedAccount = accounts.find((a) => a.id === accountId);
   const toAccount = accounts.find((a) => a.id === toAccountId);
@@ -85,10 +86,21 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
     }
   }, [editTransactionId, isOpen, accounts, transactions, getCurrency, defaultDate]);
 
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (amount <= 0) errs.amount = "請輸入金額";
+    if (!accountId) errs.account = "請選擇帳戶";
+    if (type !== "transfer" && !categoryId) errs.category = "請選擇類別";
+    if (type === "transfer" && !toAccountId) errs.toAccount = "請選擇目標帳戶";
+    if (type === "transfer" && accountId && toAccountId && accountId === toAccountId) errs.toAccount = "來源與目標帳戶不能相同";
+    if (type === "transfer" && isCrossCurrency && toAmount <= 0) errs.toAmount = "請輸入目標金額";
+    if (!date) errs.date = "請選擇日期";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSave = async () => {
-    if (!accountId || amount <= 0) return;
-    if (type !== "transfer" && !categoryId) return;
-    if (type === "transfer" && !toAccountId) return;
+    if (!validate()) return;
 
     setSaving(true);
     const amountSmallest = toSmallestUnit(amount, currencyCode);
@@ -129,7 +141,7 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
           {typeButtons.map((btn) => (
             <button
               key={btn.value}
-              onClick={() => setType(btn.value)}
+              onClick={() => { setType(btn.value); setErrors({}); }}
               className={`flex-1 py-2 rounded-lg text-[13px] font-medium transition-colors ${
                 type === btn.value
                   ? "bg-bg-card text-text-primary shadow-sm"
@@ -145,10 +157,11 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
         <div className="py-3 border-b border-border">
           <AmountInput
             value={amount}
-            onChange={setAmount}
+            onChange={(v) => { setAmount(v); if (errors.amount) setErrors((e) => { const { amount: _, ...rest } = e; return rest; }); }}
             currencyCode={currencyCode}
             autoFocus
           />
+          {errors.amount && <p className="text-[11px] text-expense mt-1">{errors.amount}</p>}
         </div>
 
         {/* Transfer: destination amount (cross-currency) */}
@@ -157,9 +170,10 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
             <p className="text-[11px] text-text-tertiary uppercase tracking-wider mb-2">目標金額</p>
             <AmountInput
               value={toAmount}
-              onChange={setToAmount}
+              onChange={(v) => { setToAmount(v); if (errors.toAmount) setErrors((e) => { const { toAmount: _, ...rest } = e; return rest; }); }}
               currencyCode={toCurrencyCode}
             />
+            {errors.toAmount && <p className="text-[11px] text-expense mt-1">{errors.toAmount}</p>}
             {amount > 0 && toAmount > 0 && (
               <p className="text-[11px] text-text-muted mt-1">
                 匯率: 1 {currencyCode} = {(toAmount / amount).toFixed(4)} {toCurrencyCode}
@@ -169,28 +183,32 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
         )}
 
         {/* Account */}
-        <div className="flex gap-3 items-end">
-          <div className="flex-1">
-            <AccountPicker
-              label={type === "transfer" ? "從" : "帳戶"}
-              selectedId={accountId}
-              onSelect={setAccountId}
-              excludeId={type === "transfer" ? toAccountId : undefined}
-            />
+        <div>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <AccountPicker
+                label={type === "transfer" ? "從" : "帳戶"}
+                selectedId={accountId}
+                onSelect={(id) => { setAccountId(id); if (errors.account) setErrors((e) => { const { account: _, ...rest } = e; return rest; }); }}
+                excludeId={type === "transfer" ? toAccountId : undefined}
+              />
+            </div>
+            {type === "transfer" && (
+              <>
+                <ArrowRight className="w-4 h-4 text-text-muted mb-3" />
+                <div className="flex-1">
+                  <AccountPicker
+                    label="到"
+                    selectedId={toAccountId}
+                    onSelect={(id) => { setToAccountId(id); if (errors.toAccount) setErrors((e) => { const { toAccount: _, ...rest } = e; return rest; }); }}
+                    excludeId={accountId}
+                  />
+                </div>
+              </>
+            )}
           </div>
-          {type === "transfer" && (
-            <>
-              <ArrowRight className="w-4 h-4 text-text-muted mb-3" />
-              <div className="flex-1">
-                <AccountPicker
-                  label="到"
-                  selectedId={toAccountId}
-                  onSelect={setToAccountId}
-                  excludeId={accountId}
-                />
-              </div>
-            </>
-          )}
+          {errors.account && <p className="text-[11px] text-expense mt-1">{errors.account}</p>}
+          {errors.toAccount && <p className="text-[11px] text-expense mt-1">{errors.toAccount}</p>}
         </div>
 
         {/* Category (not for transfers) */}
@@ -200,8 +218,9 @@ export function TransactionForm({ isOpen, onClose, editTransactionId }: Transact
             <CategoryPicker
               type={type}
               selectedId={categoryId}
-              onSelect={setCategoryId}
+              onSelect={(id) => { setCategoryId(id); if (errors.category) setErrors((e) => { const { category: _, ...rest } = e; return rest; }); }}
             />
+            {errors.category && <p className="text-[11px] text-expense mt-1">{errors.category}</p>}
           </div>
         )}
 
